@@ -9,6 +9,6 @@ class CustomException(Exception):
         super().__init__(error_msg)
 
     def __str__(self):
-        frame_info = getframeinfo(currentframe().f_back)
-        return f"{'#'*40}\nException was Raised:\n - File: {frame_info.filename}\n - Line: {frame_info.lineno}\n " \
-               f"- Error: {self.error_msg}\n - Exception: {str(self.exception)}\n{'#'*40}"
+        frame_info = getframeinfo(currentframe().f_back.f_back)
+        return f"Exception was Raised:\n - File: {frame_info.filename}\n - Line: {frame_info.lineno}\n " \
+               f"- Error: {self.error_msg}\n - Exception: {str(self.exception)}"

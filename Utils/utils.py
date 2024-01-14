@@ -1,4 +1,5 @@
-from os import path as os_path
+from os import path as os_path, makedirs
+from typing import Optional
 from Utils.custom_exception_handler import CustomException
 
 PORT_UPPER_BOUND = 65535
@@ -8,6 +9,24 @@ DEFAULT_NUM_OF_LINES = 1
 
 def check_if_exists(path_to_check: str) -> bool:
     return os_path.exists(path_to_check)
+
+
+def create_if_not_exists(path_to_create: str, is_file: Optional[bool] = False, is_dir: Optional[bool] = False) -> None:
+    # Path exists
+    if check_if_exists(path_to_check=path_to_create):
+        return
+
+    # Create empty file
+    elif is_file:
+        with open(path_to_create, 'w'):
+            pass
+
+    # Create empty directory
+    elif is_dir:
+        makedirs(path_to_create, exist_ok=True)
+
+    else:
+        raise ValueError(f"You must indicate if '{path_to_create}' is a directory or a file.")
 
 
 def create_port_file(file_name: str, port_num: str) -> None:
