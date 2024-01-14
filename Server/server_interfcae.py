@@ -12,7 +12,7 @@ class ServerInterface(ABC):
         self.logger = Logger(logger_name=self.__class__.__name__, debug_mode=debug_mode)
         self.socket = CustomSocket(connection_protocol=connection_protocol).create_socket()
 
-    def setup(self) -> None:
+    def setup_server(self) -> None:
         try:
             self.socket.bind((self.ip_address, self.port))
             self.socket.listen()
