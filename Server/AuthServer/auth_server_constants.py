@@ -12,17 +12,19 @@ class Constants:
     PORT_FILE_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\port.info"
     PORT_DEFAULT_NUM = 1256
 
+    # Files related constants
+    FILES_DIR_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\FILES"
+    CLIENTS_FILE_NAME = f"{FILES_DIR_NAME}\clients.txt"
+    SERVERS_FILE_NAME = f"{FILES_DIR_NAME}\servers.txt"
+
     # RAM template constants
     FMT_ME = '{}'
     ID = "ID"
     CLIENT_NAME = "Client_Name"
-    PUBLIC_KEY = "Public_Key"
-    PUBLIC_KEY_LENGTH = "Public_Key_Length"
+    PASSWORD_HASH = "Password_Hash"
     LAST_SEEN = "Last_Seen"
-    AES_KEY = "AES_Key"
-    AES_KEY_LENGTH = "AES_Key_Length"
-    ENCRYPTED_AES_KEY = "Encrypted_AES_Key"
-    ENCRYPTED_AES_KEY_LENGTH = "Encrypted_AES_Key_Length"
+    AES_KEY = "Aes_Key"
+
 
     AUTH_SERVER_LOGO = """
          _         _   _       ____                           
@@ -41,12 +43,14 @@ Auxiliary data structures templates.
 ram_clients_template = {
     Constants.ID: Constants.FMT_ME,
     Constants.CLIENT_NAME: Constants.FMT_ME,
-    Constants.PUBLIC_KEY: Constants.FMT_ME,
-    Constants.PUBLIC_KEY_LENGTH: Constants.FMT_ME,
-    Constants.LAST_SEEN: Constants.FMT_ME,
-    Constants.AES_KEY: Constants.FMT_ME,
-    Constants.AES_KEY_LENGTH: Constants.FMT_ME,
-    Constants.ENCRYPTED_AES_KEY: Constants.FMT_ME,
-    Constants.ENCRYPTED_AES_KEY_LENGTH: Constants.FMT_ME
+    Constants.PASSWORD_HASH: Constants.FMT_ME,
+    Constants.LAST_SEEN: Constants.FMT_ME
+}
+
+# Dictionary format for saving servers data in RAM memory
+ram_servers_template = {
+    Constants.ID: Constants.FMT_ME,
+    Constants.CLIENT_NAME: Constants.FMT_ME,
+    Constants.AES_KEY: Constants.FMT_ME
 }
 
