@@ -1,10 +1,13 @@
 from os import path as os_path, makedirs
 from typing import Optional
+from uuid import uuid4
+from datetime import datetime
 from Utils.custom_exception_handler import CustomException
 
 PORT_UPPER_BOUND = 65535
 PORT_LOWER_BOUND = 0
 DEFAULT_NUM_OF_LINES = 1
+DATE_TIME_FMT = "%d/%m/%y %H:%M:%S"
 
 
 def check_if_exists(path_to_check: str) -> bool:
@@ -66,3 +69,26 @@ def get_port_num(port_file: str) -> int:
     except Exception as e:
         raise CustomException(error_msg=f"Unable to get port number from '{port_file}'.", exception=e)
 
+
+def generate_client_uuid() -> bytes:
+    return uuid4().bytes
+
+
+def last_seen() -> str:
+    return datetime.now().strftime(DATE_TIME_FMT)
+
+
+def process_bytes(input_data: bytes) -> str:
+    if not isinstance(input_data, bytes):
+        raise ValueError(f"{input_data} must be of type bytes, not of type {type(input_data)}.")
+    # Convert bytes to string and remove null bytes
+    return input_data.decode('utf-8', 'ignore').rstrip('\x00')
+
+
+def process_bytes_tuple(tuple_data: tuple) -> tuple:
+    """Process each element in the tuple and decode bytes to string, remove null bytes."""
+    return tuple(
+        element.decode('utf-8', 'ignore').rstrip('\x00')
+        if isinstance(element, bytes) else element
+        for element in tuple_data
+    )
