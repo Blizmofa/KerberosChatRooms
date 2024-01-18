@@ -1,21 +1,24 @@
 from os import path as os_path
 
 
-class Constants:
-
+class AuthServerConstants:
     # Parsing related constants
     CONSOLE_ACK = "[+]"
     CONSOLE_FAIL = "[-]"
     CONSOLE_ERROR = "[!]"
 
     # Port related constants
-    PORT_FILE_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\port.info"
+    PORT_FILE_NAME = "port.info"
+    PORT_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{PORT_FILE_NAME}"
     PORT_DEFAULT_NUM = 1256
 
     # Files related constants
-    FILES_DIR_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\FILES"
-    CLIENTS_FILE_NAME = f"{FILES_DIR_NAME}\clients.txt"
-    SERVERS_FILE_NAME = f"{FILES_DIR_NAME}\servers.txt"
+    FILES_DIR_NAME = "FILES"
+    FILES_DIR_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{FILES_DIR_NAME}"
+    CLIENTS_FILE_NAME = "clients.txt"
+    CLIENTS_FILE_PATH = f"{FILES_DIR_PATH}\{CLIENTS_FILE_NAME}"
+    SERVERS_FILE_NAME = "servers.txt"
+    SERVERS_FILE_PATH = f"{FILES_DIR_PATH}\{SERVERS_FILE_NAME}"
 
     # RAM template constants
     FMT_ME = '{}'
@@ -25,13 +28,57 @@ class Constants:
     LAST_SEEN = "Last_Seen"
     AES_KEY = "Aes_Key"
 
-
     AUTH_SERVER_LOGO = """
          _         _   _       ____                           
         / \  _   _| |_| |__   / ___|  ___ _ ____   _____ _ __ 
        / _ \| | | | __| '_ \  \___ \ / _ \ '__\ \ / / _ \ '__|
       / ___ \ |_| | |_| | | |  ___) |  __/ |   \ V /  __/ |   
      /_/   \_\__,_|\__|_| |_| |____/ \___|_|    \_/ \___|_|   
+    """
+
+    TEMP_LOGO = """
+                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                
+                                                                                 %                    #,                                                                            
+                                                                                &&&,                 &&&/                                                                           
+                                                                               &&&#&(              .&#&&&#                                                                          
+                                                                              %&&&/%&&            #&&.&&&&%                                                                         
+                                                                             %&&&&(*&&&/        .&&&%.&&&&&#                                                                        
+                                                                            #&&&&&(*&&&&&*     #&&&&%.&&&&&&,                                                                       
+                                                                            %&&&&&,%&&&&&&&&&&&&&&&&& &&&&&&#                                                                       
+                                                                            %&&&&%#&&&&&&&&&&&&&&&&&&#/&&&&&(                                                                       
+                                                                            /&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&.                                                                       
+                                                                           .&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&                                                                       
+                                                                            &&&&&&&&&&& #&&&&&&&* &&&&&&&&&&%                                                                       
+                                                                           *,&&&&&#/&&&&..&&&&& .&&&&/#&&&&%*.                                                                      
+                                                     %&.                    /&&&&&&&% .%&&&&&&&&&#..&&&&&&&&,                    #%                                                 
+                                                  (&&&&#                      %&&&&&&&%  &&&&&&#  %&&&&&&&(                     *&&&&/                                              
+                                              #&&&&&&&&#                      ..&&&&&&&&.&&&&&&(/&&&&&&&&/                      *&&&&&&&&#                                          
+                                       .%&&&&&&&&&&&&&&,,*/(#&&&&%            #&,&&&&&&&&&&&&&&&&&&&&&&&/&*           #&&&#*,..  &&&&&&&&&&&&&&(.                                   
+                                    //&&&&&&&&&&&&&&&&/*&&&&&&&&&&&#*        ,&&&*&&&&&&&&&&&&&&&&&&&&&*&&&.       .#&&&&&&&&&&&/,&&&&&&&&&&&&&&&&(.                                
+                                 (&&&&&&&&&&&&&&&&&&&&.&&&&&&&&&&&&&&&*     .&&&&&*&&&&&&&&&&&&&&&&&&&*&&&&&      (&&&&&&&&&&&&&&.&&&&&&&&&&&&&&&&&&&&/                             
+                              ,&&&&&&&&&&&&&&&&&&&&&/*&&&&&&&&&&&&&&&&%&%( ,&&&&&&&*&&&&&&&&&&&&&&&&&,&&&&&&% .%&&&&&&&&&&&&&&&&&&*#&&&&&&&&&&&&&&&&&&&&&,                          
+                             &&, %&&/%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&, #&&&&&&&&&*&&&&&&&&&&&&&&&,&&&&&&&&&  (&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%/&&&.,&&                         
+                            *%  #&# (&&&&&&&&&&&&#%%&%%&&&&&&&&&&&&&&&&(.&&&&&&&&&&&&*&&&&&&&&&&&&&*%&&&&&&&&&& *&&&&&&&&&&&&&&&&&&&&&%%&&&&&&&&&&&# #&%  ##                        
+                            %&&&/  *&&&&&&&&&&&&&&&&&&(&&&&&&&&&&&&&&% (&&&&&&&&&&&&&&*&&&&&&&&&&&(%&&&&&&&&&&%/# #&&&&&&&&&&&&&&#&&&&&&&&&&&&&&&&&&/  (&&&&                        
+                           .&&&&&&&&&&&&&&&&&&&&&&&&&#(&&&&&&&&&&&&&&&&,*&&&&&&&&&&&&&&(........,#&&&&&&&&&&&&&%.&&&&&&&&&&&&&&&&%(&&&&&&&&&&&&&&&&&&&&&&&&&*                       
+                          *&&&&&&&&&&&&&&&&&&&&&&&&&&(%&&&&&&&&&&&&&&&%.&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&#/&&&&&&&&&&&&&&&&/&&&&&&&&&&&&&&&&&&&&&&&&&&/                      
+                        %&&&&&&&&&&&&&&&&&&&&&&&&&%*%&&&&&&&&&&&&&&&&&,*&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%.&&&&&&&&&&&&&&&&&%*%&&&&&&&&&&&&&&&&&&&&&&&&&&                    
+                      &&&&&&&&&&&&&&&&&&&&&&&&&&%*(*%&&&&&&&&&&&&&&&&&.,&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&% %&&&&&&&&&&&&&&&&&/(##&&&&&&&&&&&&&&&&&&&&&&&&&&.                 
+                   .%%&&&&&&&&&&%&#%&&&&&&&&&&&&&&&/%&&&&&&&&&&&&&&&&&# %%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&%&,,&&&&&&&&&&&&&&&&&&/%&&&&&&&&&&&&&&%/&&&&&&&&&&&&&(.               
+                  #&&&&&&&&&#(%(&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&(..&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&% .&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&/#%%&&&&&&&&&#              
+                 &&&&&&&&#(&%%&&&&%#,               .#&&&&&&&&&&&&&&&&&&&*#&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&,&&&&&&&&&&&&&&&&&&&&#.             ,(%&&&&&&/%(%&&&&&&&&,            
+                  .%&%&(&&&&&(.                        .%&&&&&&&&&&&&&&&&&*%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&*%&&&&&&&&&&&&&&&&&(                        ,%&&&%&/%&&&#              
+                       ,/.                               #&&&&&&&&&&&&&&&&&,%&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&.%&&&&&&&&&&&&&&&&&.                              *%#,                  
+                                                         *&&&&&&&&&&&&&&&&&&//&&&&&&&&&&&&&&&&&&&&&&&&&&&&% &&&&&&&&&&&&&&&&&&(                                                     
+                                                        %%#%&&&&&&&&&&&&&&&&&% %%&&&&&&&&&&&&&&&&&&&&&&&* *&&&&&&&&&&&&&&&&&&%&%                                                    
+                                                          , *&&&&&&&&&&&&&&&&&&. #&&&&&&&&&&&&&&&&&&&&%  #&&&&&&&&&&&&&&&&&% *                                                      
+                                                              %&&&&&&&&&&&&&&&&&% .&&&&&&&&&&&&&&&&&&( *&&&&&&&&&&&&&&&&&&(                                                         
+                                                                # ,&&&&&&&&&&&&&&&# *&&&&&&&&&&&&&&& .&&&&&&&&&&&&&&&% .(                                                           
+                                                                      , (%&&&&&&&&&&# /&&&&&&&&&&% .&&&&&&&&&&&%*(,                                                                 
+                                                                            .(%&&&&&&&% .&&&&&&/ *&&&&&&&&%(.                                                                       
+                                                                                   ,(%&&&* #&, #&&&&#*.                                                                             
+    
     """
 
 
@@ -41,16 +88,15 @@ Auxiliary data structures templates.
 
 # Dictionary format for saving clients data in RAM memory
 ram_clients_template = {
-    Constants.ID: Constants.FMT_ME,
-    Constants.CLIENT_NAME: Constants.FMT_ME,
-    Constants.PASSWORD_HASH: Constants.FMT_ME,
-    Constants.LAST_SEEN: Constants.FMT_ME
+    AuthServerConstants.ID: AuthServerConstants.FMT_ME,
+    AuthServerConstants.CLIENT_NAME: AuthServerConstants.FMT_ME,
+    AuthServerConstants.PASSWORD_HASH: AuthServerConstants.FMT_ME,
+    AuthServerConstants.LAST_SEEN: AuthServerConstants.FMT_ME
 }
 
 # Dictionary format for saving servers data in RAM memory
 ram_servers_template = {
-    Constants.ID: Constants.FMT_ME,
-    Constants.CLIENT_NAME: Constants.FMT_ME,
-    Constants.AES_KEY: Constants.FMT_ME
+    AuthServerConstants.ID: AuthServerConstants.FMT_ME,
+    AuthServerConstants.CLIENT_NAME: AuthServerConstants.FMT_ME,
+    AuthServerConstants.AES_KEY: AuthServerConstants.FMT_ME
 }
-
