@@ -22,11 +22,11 @@ class AuthServerConstants:
 
     # RAM template constants
     FMT_ME = '{}'
-    ID = "ID"
-    CLIENT_NAME = "Client_Name"
-    PASSWORD_HASH = "Password_Hash"
-    LAST_SEEN = "Last_Seen"
-    AES_KEY = "Aes_Key"
+    ID = "client_id"
+    CLIENT_NAME = "name"
+    PASSWORD_HASH = "password_hash"
+    LAST_SEEN = "last_seen"
+    AES_KEY = "aes_key"
 
     AUTH_SERVER_LOGO = """
          _         _   _       ____                           
@@ -36,7 +36,7 @@ class AuthServerConstants:
      /_/   \_\__,_|\__|_| |_| |____/ \___|_|    \_/ \___|_|   
     """
 
-    TEMP_LOGO = """
+    KERBEROS_LOGO = """
                                                                                                                                                                                     
                                                                                                                                                                                                                                                                                                                                                 
                                                                                  %                    #,                                                                            
