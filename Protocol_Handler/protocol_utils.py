@@ -1,96 +1,83 @@
+from Utils import utils
+# TODO - refactor according to new protocol
+
 
 class ProtocolConstants:
 
-    SERVER_VERSION = 3
+    SERVER_VERSION = 24
 
     # Default sizes
-    DEFAULT_VALUE = 0
-    SERVER_RECEIVE_BUFFER_SIZE = 1024
-    CLIENT_UUID_SIZE = 16
-    CLIENT_PUBKEY_SIZE = 160
-    CLIENT_FILE_NAME_SIZE = 255
-    SERVER_AES_KEY_SIZE = 16
-    SERVER_ENCRYPTED_AES_KEY_SIZE = 128
-    FILE_CONTENT_SIZE = 4
-    CRC_SIZE = 4
-    CRC_RE_RECEIVE_MAX = 3
-    CRC_CHUNK_SIZE = 3
-    ENCRYPTED_FILE_NAME_SUFFIX = 4
+    SIZE_DEFAULT = 0
+    SIZE_CLIENT_ID = 16
+    SIZE_VERSION = 1
+    SIZE_CODE = 2
+    SIZE_PAYLOAD = 4
+    SIZE_CLIENT_NAME = 255
+    SIZE_PASSWORD = 255
+    SIZE_AES_KEY = 32
+    SIZE_IV = 16
+    SIZE_SERVER_ID = 16
+    SIZE_NONCE = 8
+    SIZE_SERVER_NAME = 255
+    SIZE_EXPIRATION_TIME = 4
+    SIZE_TIMESTAMP = 4
+    SIZE_MSG = 4
 
-    # Packet indexes
-    CLIENT_ID_INDEX = 0
-    CLIENT_VERSION_INDEX = 1
-    CLIENT_REQUEST_CODE_INDEX = 2
-    CLIENT_PAYLOAD_SIZE_INDEX = 3
-    CLIENT_USERNAME_INDEX = 4
-    CLIENT_PUBKEY_INDEX = 5
-    CLIENT_FILE_REQUEST_CONTENT_SIZE_INDEX = 5
-    CLIENT_FILE_NAME_INDEX = 6
+    # Request codes
+    REQ_CLIENT_REG = 1025
+    REQ_MSG_SERVERS_LIST = 1026
+    REQ_SERVER_REG = 1027
+    REQ_AES_KEY = 1028
+    REQ_SEND_MSG = 1029
 
-    # Client request codes
-    CLIENT_REG_REQUEST = 1100
-    CLIENT_PUBKEY_REQUEST = 1101
-    CLIENT_ENCRYPTED_FILE_REQUEST = 1103
-    CLIENT_VALID_CRC_REQUEST = 1104
-    CLIENT_INVALID_CRC_REQUEST = 1105
-    CLIENT_INVALID_CRC_FOURTH_TIME_REQUEST = 1106
-    CLIENT_UNPACK_CRC_REQUEST_CODE = 1111
+    # Response codes
+    RES_REGISTER_SUCCESS = 1600
+    RES_REGISTER_FAILED = 1601
+    RES_MSG_SERVERS_LIST = 1602
+    RES_ENCRYPTED_AES_KEY = 1603
+    RES_AES_KEY_ACK = 1604
+    RES_MSG_ACK = 1605
+    RES_GENERAL_ERROR = 1609
 
-    # Packet unpack/pack formats
-    UNPACK_DEFAULT_FORMAT = "<16sBHI"
-    PACK_DEFAULT_FORMAT = "BHI"
-
-    # Server response codes and strings
-    SERVER_REG_SUCCESS_RESPONSE = 2100
-    SERVER_REG_FAILED_RESPONSE = 2101
-    SERVER_ENCRYPTED_KEY_RESPONSE = 2102
-    SERVER_FILE_CRC_RESPONSE = 2103
-    SERVER_ACK_RESPONSE = 2104
-    SERVER_RESPONSE_CODE_STR = "response_code"
-    SERVER_PAYLOAD_SIZE_STR = "payload_size"
+    # Auxiliary list for no payload responses
+    NO_PAYLOAD_CODE_RESPONSES = [RES_REGISTER_FAILED, RES_AES_KEY_ACK, RES_MSG_ACK, RES_GENERAL_ERROR]
 
 
-# Auxiliary template for client payload sizes according to the different request codes
-client_request_template = {
-    ProtocolConstants.CLIENT_REG_REQUEST: '255s',
-    ProtocolConstants.CLIENT_PUBKEY_REQUEST: '255s160s',
-    ProtocolConstants.CLIENT_ENCRYPTED_FILE_REQUEST: '16sI255s',
-    ProtocolConstants.CLIENT_UNPACK_CRC_REQUEST_CODE: '16s255s'
+# Request default packet structure
+server_request = {
+    "client_id": {"size": ProtocolConstants.SIZE_CLIENT_ID, "type": str, "content": None},
+    "version": {"size": ProtocolConstants.SIZE_VERSION, "type": int, "content": None},
+    "code": {"size": ProtocolConstants.SIZE_CODE, "type": int, "content": None},
+    "payload_size": {"size": ProtocolConstants.SIZE_PAYLOAD, "type": int, "content": None}
 }
 
-# Auxiliary template for server response codes and payload sizes
-server_response_template = {
+server_response = {
+    "version": {"size": ProtocolConstants.SIZE_VERSION, "type": int, "content": None},
+    "code": {"size": ProtocolConstants.SIZE_CODE, "type": int, "content": None},
+    "payload_size": {"size": ProtocolConstants.SIZE_PAYLOAD, "type": int, "content": None}
+}
 
-    # For response 2100
-    ProtocolConstants.SERVER_REG_SUCCESS_RESPONSE: {
-        ProtocolConstants.SERVER_RESPONSE_CODE_STR: ProtocolConstants.SERVER_REG_SUCCESS_RESPONSE,
-        ProtocolConstants.SERVER_PAYLOAD_SIZE_STR: ProtocolConstants.CLIENT_UUID_SIZE
+code_to_payload_template = {
+
+    # 1025
+    ProtocolConstants.REQ_CLIENT_REG: {
+        "name": {"size": ProtocolConstants.SIZE_CLIENT_NAME, "type": str, "content": None},
+        "password": {"size": ProtocolConstants.SIZE_PASSWORD, "type": str, "content": None}
     },
 
-    # For response 2101
-    ProtocolConstants.SERVER_REG_FAILED_RESPONSE: {
-        ProtocolConstants.SERVER_RESPONSE_CODE_STR: ProtocolConstants.SERVER_REG_FAILED_RESPONSE,
-        ProtocolConstants.SERVER_PAYLOAD_SIZE_STR: ProtocolConstants.DEFAULT_VALUE
-    },
-
-    # For response 2102
-    ProtocolConstants.SERVER_ENCRYPTED_KEY_RESPONSE: {
-        ProtocolConstants.SERVER_RESPONSE_CODE_STR: ProtocolConstants.SERVER_ENCRYPTED_KEY_RESPONSE,
-        ProtocolConstants.SERVER_PAYLOAD_SIZE_STR: ProtocolConstants.CLIENT_UUID_SIZE + ProtocolConstants.SERVER_ENCRYPTED_AES_KEY_SIZE
-    },
-
-    # For response 2103
-    ProtocolConstants.SERVER_FILE_CRC_RESPONSE: {
-        ProtocolConstants.SERVER_RESPONSE_CODE_STR: ProtocolConstants.SERVER_FILE_CRC_RESPONSE,
-        ProtocolConstants.SERVER_PAYLOAD_SIZE_STR: ProtocolConstants.CLIENT_UUID_SIZE +
-                                                   ProtocolConstants.FILE_CONTENT_SIZE +
-                                                   ProtocolConstants.CLIENT_FILE_NAME_SIZE +
-                                                   ProtocolConstants.CRC_SIZE
-    },
-
-    # For response 2104
-    ProtocolConstants.SERVER_ACK_RESPONSE: {
-        ProtocolConstants.SERVER_RESPONSE_CODE_STR: ProtocolConstants.SERVER_ACK_RESPONSE,
-        ProtocolConstants.SERVER_PAYLOAD_SIZE_STR: ProtocolConstants.DEFAULT_VALUE
+    # 1600
+    ProtocolConstants.RES_REGISTER_SUCCESS: {
+        "client_id": {"size": ProtocolConstants.SIZE_CLIENT_ID, "type": bytes, "content": None}
     }
+
+    # 1601
+
+}
+
+packet_formatter_template = {
+    1: 'B',
+    2: 'H',
+    4: 'I',
+    bytes: 's',
+    "little_endian": '<'
 }

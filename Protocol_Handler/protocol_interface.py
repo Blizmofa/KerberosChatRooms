@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
+from typing import Union, Optional
 
 
 class ProtocolHandlerInterfaces(ABC):
     """Protocol Handler Interfaces Class is an auxiliary class to improve server performances."""
 
     @abstractmethod
-    def pack_request(self, fmt: str, *args) -> bytes:
+    def pack_request(self, code: int, data: dict, formatter: dict) -> bytes:
         """Main pack packet method to be override."""
         raise NotImplementedError(f"{self.pack_request.__name__} must be implemented.")
 
     @abstractmethod
-    def unpack_request(self, request_code: int, received_packet: bytes) -> tuple:
+    def unpack_request(self, code: int, received_packet: bytes, formatter: dict, deserialize: Optional[bool] = False) -> Union[dict, tuple]:
         """Main unpack packet method to be override."""
         raise NotImplementedError(f"{self.unpack_request.__name__} must be implemented.")
