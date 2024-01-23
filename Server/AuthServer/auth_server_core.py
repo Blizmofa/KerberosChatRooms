@@ -3,7 +3,7 @@ from Server.server_interface import ServerInterface
 from Utils.logger import Logger
 from Utils import utils
 from Utils.custom_exception_handler import CustomException
-from Server.AuthServer.auth_server_constants import AuthServerConstants, ram_clients_template
+from Server.AuthServer.auth_server_constants import AuthServerConstants, ram_clients_template, ram_servers_template
 from Server.AuthServer.auth_server_logic import AuthServerLogic
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Protocol_Handler.protocol_utils import ProtocolConstants, server_request, server_response
@@ -46,11 +46,16 @@ class AuthServer(ServerInterface):
             client_ram_template = ram_clients_template.copy()
             client_ram_template[AuthServerConstants.LAST_SEEN] = utils.last_seen()
 
-            # Handle Client Registration request
-            self.auth_server_logic.handle_registration_request(server_socket=self.custom_socket, client_socket=sck, client_ram_template=client_ram_template)
+            # Create new server RAM DB
+            server_ram_template = ram_servers_template
+
+            # Handle Registration requests
+            self.auth_server_logic.handle_registration_request(server_socket=self.custom_socket, client_socket=sck,
+                                                               client_ram_template=client_ram_template, server_ram_template=server_ram_template)
 
             # Handle Message Server Registration request
             # TODO - after implementation, maybe refactor both register methods into one
+
 
             # TODO - create json file for each client according to his uuid json summery of all his and the server session
 
