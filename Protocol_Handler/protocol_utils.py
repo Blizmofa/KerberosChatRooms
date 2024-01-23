@@ -65,6 +65,12 @@ code_to_payload_template = {
         "password": {"size": ProtocolConstants.SIZE_PASSWORD, "type": str, "content": None}
     },
 
+    # 1027
+    ProtocolConstants.REQ_SERVER_REG: {
+        "name": {"size": ProtocolConstants.SIZE_CLIENT_NAME, "type": str, "content": None},
+        "aes_key": {"size": ProtocolConstants.SIZE_AES_KEY, "type": bytes, "content": None}
+    },
+
     # 1600
     ProtocolConstants.RES_REGISTER_SUCCESS: {
         "client_id": {"size": ProtocolConstants.SIZE_CLIENT_ID, "type": bytes, "content": None}

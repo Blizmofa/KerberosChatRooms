@@ -30,13 +30,17 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
 
             fmt = self.generate_packet_fmt(raw_packet=self.build_packet_format(code=code, formatter=formatter))
 
-            # Validate unpack format
+            # Adjust unpack format sizes
             # TODO - at the end, refactor into validate method
             if len(received_packet) != struct.calcsize(fmt):
-                fmt += f"{len(received_packet) - struct.calcsize(fmt)}s"
+                temp = len(received_packet) - struct.calcsize(fmt)
+                if temp > 255:
+                    remainder = temp % 255
+                    fmt += f"{temp-remainder}s{remainder}s"
+                else:
+                    fmt += f"{temp}s"
 
             unpacked = unpack(fmt, received_packet)
-            print(unpacked)
             self.class_logger.logger.debug(f"Unpacked packet '{code}' successfully.")
 
             # Return as formatted dictionary
@@ -50,7 +54,7 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
         except Exception as e:
             raise CustomException(error_msg=f"Unable to unpack '{code}'.", exception=e)
 
-    def clean_unpacked_data(self, unpacked_data: tuple, formatter: dict) -> dict:
+    def clean_unpacked_data(self, unpacked_data: tuple, formatter: dict) -> Tuple[int, dict]:
         # Deserialize the data
         deserialized = self.deserialize_packet(packet=unpacked_data)
 
@@ -62,7 +66,7 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
         # Insert and clean deserialized data into the formatted packet
         formatted_data = self.insert_unpacked_packet_content(data, deserialized)
         cleaned_data = self.remove_empty_data(data=formatted_data)
-        return cleaned_data
+        return code, cleaned_data
 
     def deserialize_packet(self, packet: tuple) -> tuple:
         """
@@ -70,6 +74,7 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
         only if null bytes are present.
         """
         deserialized_data = []
+
         for element in packet:
             if isinstance(element, bytes) and b'\x00' in element:
                 deserialized_data.append(element.decode('utf-8', 'ignore').rstrip('\x00'))
@@ -123,6 +128,7 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
         return request_template
 
     def insert_unpacked_packet_content(self, data_format: dict, unpacked_packet: tuple):
+        print(unpacked_packet)
         for index, key in enumerate(data_format.keys()):
             data_format[key] = unpacked_packet[index]
         return data_format
