@@ -20,9 +20,9 @@ class MsgServerConstants:
     FMT_ME = '{}'
     ID = "ID"
     CLIENT_NAME = "Client_Name"
-    PASSWORD_HASH = "Password_Hash"
-    LAST_SEEN = "Last_Seen"
-    AES_KEY = "Aes_Key"
+    TICKET_IV = "Ticket_IV"
+    AES_KEY = "AES_Key"
+    MSG_IV = "MSG_IV"
 
 
     MSG_SERVER_LOGO = """
@@ -39,15 +39,9 @@ class MsgServerConstants:
 # Dictionary format for saving clients data in RAM memory
 ram_clients_template = {
     MsgServerConstants.ID: MsgServerConstants.FMT_ME,
-    MsgServerConstants.CLIENT_NAME: MsgServerConstants.FMT_ME,
-    MsgServerConstants.PASSWORD_HASH: MsgServerConstants.FMT_ME,
-    MsgServerConstants.LAST_SEEN: MsgServerConstants.FMT_ME
+    MsgServerConstants.TICKET_IV: MsgServerConstants.FMT_ME,
+    MsgServerConstants.AES_KEY: MsgServerConstants.FMT_ME,
+    MsgServerConstants.MSG_IV: MsgServerConstants.FMT_ME
 }
 
-# Dictionary format for saving servers data in RAM memory
-ram_servers_template = {
-    MsgServerConstants.ID: MsgServerConstants.FMT_ME,
-    MsgServerConstants.CLIENT_NAME: MsgServerConstants.FMT_ME,
-    MsgServerConstants.AES_KEY: MsgServerConstants.FMT_ME
-}
 
