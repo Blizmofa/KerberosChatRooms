@@ -1,7 +1,7 @@
 from Socket.custom_socket import socket
 from Utils.custom_exception_handler import CustomException
 from Utils.logger import Logger
-from Server.MsgServer.msg_server_constants import MsgServerConstants
+from Server.MsgServer.msg_server_constants import Constants
 
 class MsgServerLogic:
     def __init__(self, debug_mode: bool) -> None:
@@ -21,7 +21,7 @@ class MsgServerLogic:
         
     def read_msg_server_config(self):
         try:
-            with open(MsgServerConstants.MSG_FILE_NAME, 'r') as file:
+            with open(Constants.MSG_FILE_NAME, 'r') as file:
                 port = int(file.readline().strip())
                 server_name = file.readline().strip()
                 shared_key_ascii = file.readline().strip()
