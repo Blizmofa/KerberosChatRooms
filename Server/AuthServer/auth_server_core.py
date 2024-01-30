@@ -6,7 +6,7 @@ from Utils.custom_exception_handler import CustomException
 from Server.AuthServer.auth_server_constants import AuthServerConstants, ram_clients_template, ram_servers_template
 from Server.AuthServer.auth_server_logic import AuthServerLogic
 from Protocol_Handler.protocol_handler import ProtocolHandler
-from Protocol_Handler.protocol_utils import ProtocolConstants, server_request, server_response
+from Protocol_Handler import protocol_utils
 
 
 class AuthServer(ServerInterface):
@@ -38,33 +38,64 @@ class AuthServer(ServerInterface):
             raise CustomException(error_msg=f"Unable to setup {self.__class__.__name__}.", exception=e)
 
     def handle_new_client(self, sck: socket) -> None:
+
         try:
             # Insert new connection
             self.new_connection(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
 
             # Create new client RAM DB
             client_ram_template = ram_clients_template.copy()
-            client_ram_template[AuthServerConstants.LAST_SEEN] = utils.last_seen()
+            client_ram_template[AuthServerConstants.RAM_LAST_SEEN] = utils.time_now()
 
             # Create new server RAM DB
             server_ram_template = ram_servers_template
 
+            # Create Request/Response templates
+            server_request = protocol_utils.server_request.copy()
+            server_response = protocol_utils.server_response.copy()
+
+            # Receive requests
+            auth_server_request = self.custom_socket.receive_packet(sck=sck, logger=self.logger)
+            request_code, unpacked = self.protocol_handler.unpack_request(received_packet=auth_server_request,
+                                                                          formatter=server_request,
+                                                                          deserialize=True)
+
             # Handle Registration requests
-            self.auth_server_logic.handle_registration_request(server_socket=self.custom_socket, client_socket=sck,
-                                                               client_ram_template=client_ram_template, server_ram_template=server_ram_template)
+            if request_code == protocol_utils.Constants.REQ_CLIENT_REG or request_code == protocol_utils.Constants.REQ_SERVER_REG:
 
-            # Handle Message Server Registration request
-            # TODO - after implementation, maybe refactor both register methods into one
+                self.auth_server_logic.handle_registration_request(server_socket=self.custom_socket,
+                                                                   client_socket=sck,
+                                                                   request_code=request_code,
+                                                                   unpacked_packet=unpacked,
+                                                                   client_ram_template=client_ram_template,
+                                                                   server_ram_template=server_ram_template)
 
+            # Handle AES key request from client
+            elif request_code == protocol_utils.Constants.REQ_AES_KEY:
+                self.auth_server_logic.handle_aes_key_request(server_socket=self.custom_socket,
+                                                              client_socket=sck,
+                                                              unpacked_packet=unpacked,
+                                                              client_ram_template=client_ram_template,
+                                                              server_ram_template=server_ram_template)
+
+            # Handle services list request from client
+            elif request_code == protocol_utils.Constants.REQ_MSG_SERVERS_LIST:
+
+                self.auth_server_logic.handle_services_list_request(server_socket=self.custom_socket,
+                                                                    client_socket=sck,
+                                                                    unpacked_packet=unpacked,
+                                                                    client_ram_template=client_ram_template,
+                                                                    server_request=server_request,
+                                                                    server_response=server_response)
+
+            else:
+                # TODO - send general error to client
+                raise ValueError(f"Unsupported request code {request_code}.")
 
             # TODO - create json file for each client according to his uuid json summery of all his and the server session
-
-            # Handle message servers list request
-
-            # Handle AES key request
-
         except Exception as e:
             raise CustomException(error_msg=f"Unable to handle client {sck.getpeername()}.", exception=e)
+
 
     def run(self) -> None:
         try:
