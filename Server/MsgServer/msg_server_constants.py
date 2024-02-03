@@ -3,34 +3,37 @@ from os import path as os_path
 
 class Constants:
 
-    # Parsing related constants
-    CONSOLE_ACK = "[+]"
-    CONSOLE_FAIL = "[-]"
-    CONSOLE_ERROR = "[!]"
 
-    # Port related constants
     PORT_FILE_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\port.info"
-    PORT_DEFAULT_NUM = 1234
-    
-    # Msg data related constants
+
+
     MSG_FILE_NAME = "msg.info"
     MSG_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{MSG_FILE_NAME}"
+
+    SERVICE_POOL_FILE_NAME = "services_pool.json"
+
+    DEF_IP_ADDRESS = '127.0.0.1'
+    DEF_PORT_NUM = 1234
+    DEF_SERVER_NAM_FMT = "Printer "
 
     # TODO - refactor to protocol constants
     # TODO - create server_constants file instead of msg and auth constants
     # Service Manager
     FMT_ME = '{}'
-    SERVICE_POOL_FILE_NAME = "services_pool.json"
+
     CONNECTION_PROTOCOL = "connection_protocol"
-    IP_ADDRESS = "ip_address"
     AUTH_PORT = "auth_port"
-    MSG_PORT = "msg_port"
-    SERVICE_NAME = "service_name"
-    SERVICE_ID = "server_id"
-    IS_REGISTERED = "is_registered"
-    TICKET_IV = "ticket_iv"
-    AES_KEY = "aes_key"
-    MSG_IV = "msg_iv"
+
+    RAM_SERVICE_NAME = "service_name"
+    RAM_SERVICE_ID = "server_id"
+    RAM_SERVICE_ID_HEX = "server_id_hex"
+    RAM_IS_REGISTERED = "is_registered"
+    RAM_TICKET_IV = "ticket_iv"
+    RAM_AES_KEY = "aes_key"
+    RAM_AES_KEY_HEX = "aes_key_hex"
+    RAM_MESSAGE_IV = "message_iv"
+    RAM_PORT = "port"
+    RAM_IP_ADDRESS = "ip_address"
 
     MSG_SERVER_LOGO = """
            \/  |            / ____|                         
@@ -42,26 +45,28 @@ class Constants:
                     |___/                                   
     """
 
-    
+
 # Dictionary format for saving clients data in RAM memory
 ram_service_template = {
-    Constants.SERVICE_ID: Constants.FMT_ME,
-    Constants.SERVICE_NAME: Constants.FMT_ME,
-    Constants.TICKET_IV: Constants.FMT_ME,
-    Constants.AES_KEY: Constants.FMT_ME,
-    Constants.MSG_IV: Constants.FMT_ME,
-    Constants.IS_REGISTERED: Constants.FMT_ME
+    Constants.RAM_SERVICE_ID: Constants.FMT_ME,
+    Constants.RAM_SERVICE_ID_HEX: Constants.FMT_ME,
+    Constants.RAM_SERVICE_NAME: Constants.FMT_ME,
+    Constants.RAM_TICKET_IV: Constants.FMT_ME,
+    Constants.RAM_AES_KEY: Constants.FMT_ME,
+    Constants.RAM_AES_KEY_HEX: Constants.FMT_ME,
+    Constants.RAM_MESSAGE_IV: Constants.FMT_ME,
+    Constants.RAM_IS_REGISTERED: Constants.FMT_ME
 }
 
 service_manager_template = {
     Constants.CONNECTION_PROTOCOL: Constants.FMT_ME,
-    Constants.IP_ADDRESS: Constants.FMT_ME,
+    Constants.RAM_IP_ADDRESS: Constants.FMT_ME,
     Constants.AUTH_PORT: Constants.FMT_ME,
-    Constants.MSG_PORT: Constants.FMT_ME,
-    Constants.SERVICE_ID: Constants.FMT_ME,
-    Constants.SERVICE_NAME: Constants.FMT_ME,
-    Constants.TICKET_IV: Constants.FMT_ME,
-    Constants.AES_KEY: Constants.FMT_ME,
-    Constants.MSG_IV: Constants.FMT_ME,
-    Constants.IS_REGISTERED: Constants.FMT_ME
+    Constants.RAM_PORT: Constants.FMT_ME,
+    Constants.RAM_SERVICE_ID_HEX: Constants.FMT_ME,
+    Constants.RAM_SERVICE_NAME: Constants.FMT_ME,
+    Constants.RAM_TICKET_IV: Constants.FMT_ME,
+    Constants.RAM_AES_KEY_HEX: Constants.FMT_ME,
+    Constants.RAM_MESSAGE_IV: Constants.FMT_ME,
+    Constants.RAM_IS_REGISTERED: Constants.FMT_ME
 }
