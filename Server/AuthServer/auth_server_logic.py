@@ -1,6 +1,6 @@
 import json
 import struct
-
+from typing import Union
 from Utils.logger import Logger
 from Utils import utils
 import base64
@@ -109,9 +109,10 @@ class AuthServerLogic:
                     ProtoConsts.SERVER_IP: server_ip,
                     ProtoConsts.SERVER_PORT: server_port
                 })
-                utils.insert_data_to_file_db(file_path=AuthConsts.SERVERS_FILE_PATH,
-                                             data=server_ram_template,
-                                             formatter=file_db_servers_template.copy())
+
+                # Insert new server to file DB
+                file_data = utils.insert_data_to_template(data=server_ram_template, formatter=file_db_servers_template.copy())
+                utils.append_data_to_json(file_path=AuthConsts.SERVERS_FILE_PATH, data=file_data)
 
                 # Log output
                 msg = (f"{ProtoConsts.CONSOLE_ACK} '{data[ProtoConsts.NAME]}' "
@@ -152,6 +153,7 @@ class AuthServerLogic:
                                     server_response: dict) -> None:
         """Sends response with the packed register request back to client or server."""
         try:
+            # TODO - if server has shut down unexpectedly, load client.txt if exists, and check if registered there
             # Handle clients requests
             if request_code == ProtoConsts.REQ_CLIENT_REG:
                 register_response = self.__register_client(data=unpacked_packet, client_ram_template=client_ram_template, server_response=server_response)
@@ -176,24 +178,70 @@ class AuthServerLogic:
         except Exception as e:
             raise CustomException(error_msg=f"Unable to create ticket for.", exception=e)
 
-    def handle_aes_key_request(self, server_socket: CustomSocket, client_socket: socket, unpacked_packet: dict,
-                               client_ram_template: dict, server_ram_template: dict, server_response: dict) -> None:
+    def __parse_msg_info_file(self) -> tuple:
         try:
-            # Fetch and validate needed data
-            client_nonce = unpacked_packet[ProtoConsts.NONCE]
-            client_ram_template[ProtoConsts.NONCE] = client_nonce
-            client_id = client_ram_template[ProtoConsts.CLIENT_ID]
-            server_id = unpacked_packet[ProtoConsts.SERVER_ID]
-            # TODO - continue from here, get client wanted server id the get its data and continue
-            # TODO - check if server id is in msg servers list and file
-            # TODO - insert values to RAM and file DB
-            password_hash = self.encryptor.hash_password(password='qwer1234')
+            # Parse default service data
+            ip_and_port = utils.parse_info_file(file_path=MsgConsts.MSG_FILE_NAME,
+                                                target_line_number=MsgConsts.LINE_IP_PORT)
+            server_id = utils.parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_ID)
+            server_name = utils.parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_NAME)
+            server_aes_key = utils.parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_AES_KEY)
 
+            # Return as a Tuple
+            return ip_and_port, server_name, server_id, server_aes_key
+
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to parse {MsgConsts.MSG_FILE_NAME}.", exception=e)
+
+    def __get_service_object(self, service_id: Union[str, bytes]) -> Union[dict, None]:
+        """Private method that return the wanted service entry from Client DB."""
+        try:
+            # Get from JSON DB
+            if not self.msg_server_list and utils.check_if_exists(path_to_check=AuthConsts.SERVERS_FILE_PATH):
+                if not isinstance(service_id, str):
+                    service_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=service_id)
+                    service_object = utils.fetch_value_from_json_db(file_path=AuthConsts.SERVERS_FILE_PATH,
+                                                                    pivot_key=AuthConsts.RAM_SERVER_ID_HEX,
+                                                                    pivot_value=service_id)
+                    if service_object:
+                        self.msg_server_list.append(service_object)
+
+            # Get default service
+            if not self.msg_server_list and utils.check_if_exists(path_to_check=MsgConsts.MSG_FILE_NAME):
+
+                ip_and_port, server_name, server_id, server_aes_key = self.__parse_msg_info_file()
+                self.msg_server_list.append({AuthConsts.RAM_SERVER_ID: server_id,
+                                             AuthConsts.RAM_CLIENT_NAME: server_name,
+                                             AuthConsts.RAM_AES_KEY: server_aes_key})
+            # All databases are empty
+            if not self.msg_server_list:
+                print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} There aren't any registered services, "
+                                                 f"please call support.", color=utils.Colors.RED))
+
+            # Get and return the wanted service object
+            service_object = utils.fetch_value_from_ram_db(data=self.msg_server_list,
+                                                           pivot_key=AuthConsts.RAM_SERVER_ID,
+                                                           pivot_value=service_id)
+            # For dev mode:
+            if self.debug_mode:
+                print(utils.write_with_color(msg=f"Selected service object --> {service_object}", color=utils.Colors.CYAN))
+
+            return service_object
+
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to get client wanted service.", exception=e)
+
+    def __pack_encrypted_key_packet(self, client_nonce: bytes) -> bytes:
+        try:
+            # TODO - fetch client password hash from ram or client DB txt
+            password_hash = self.encryptor.hash_password(password='qwer1234')
             # Generate AES key, encrypt nonce, and pack encrypted key packet
-            aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
+            client_aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
             encrypted_key_iv = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_IV)
-            encrypted_aes_key = self.encryptor.encrypt(value=aes_key, encryption_key=password_hash, iv=encrypted_key_iv)
-            encrypted_nonce = self.encryptor.encrypt(value=client_nonce, encryption_key=password_hash, iv=encrypted_key_iv)
+            encrypted_aes_key = self.encryptor.encrypt(value=client_aes_key, encryption_key=password_hash,
+                                                       iv=encrypted_key_iv)
+            encrypted_nonce = self.encryptor.encrypt(value=client_nonce, encryption_key=password_hash,
+                                                     iv=encrypted_key_iv)
 
             # Pack Encrypted key packet
             encrypted_key_data = {
@@ -202,19 +250,23 @@ class AuthServerLogic:
                 ProtoConsts.AES_KEY: encrypted_aes_key
             }
 
-            packed_encrypted_key_packet = self.protocol_handler.pack_request(code=ProtoConsts.PKT_ENCRYPTED_KEY,
-                                                                             data=encrypted_key_data,
-                                                                             formatter=code_to_payload_template[1701])
+            return self.protocol_handler.pack_request(code=ProtoConsts.PKT_ENCRYPTED_KEY,
+                                                      data=encrypted_key_data,
+                                                      formatter=code_to_payload_template[ProtoConsts.PKT_ENCRYPTED_KEY])
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to pack encrypted key packet.", exception=e)
 
-            # Pack Ticket packet
+    def __pack_ticket_packet(self, client_id: bytes, server_id: bytes, service_aes_key: bytes) -> bytes:
+        try:
             # TODO - insert to DBs
             # TODO - how does the msg server gets his key??
             ticket_iv = self.encryptor.generate_bytes_stream()
-            ticket_aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
+            # ticket_aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
             expiration_time = utils.expiration_time(days_buffer=1)
-            encrypted_ticket_aes_key = self.encryptor.encrypt(value=ticket_aes_key, encryption_key=ticket_aes_key, iv=ticket_iv)
+            encrypted_ticket_aes_key = self.encryptor.encrypt(value=service_aes_key, encryption_key=service_aes_key,
+                                                              iv=ticket_iv)
             encrypted_ticket_expiration_time = self.encryptor.encrypt(value=expiration_time,
-                                                                      encryption_key=ticket_aes_key,
+                                                                      encryption_key=service_aes_key,
                                                                       iv=ticket_iv)
 
             ticket_data = {
@@ -227,64 +279,88 @@ class AuthServerLogic:
                 ProtoConsts.EXPIRATION_TIME: encrypted_ticket_expiration_time
             }
 
-            packed_ticket_packet = self.protocol_handler.pack_request(code=ProtoConsts.PKT_TICKET,
-                                                                      data=ticket_data,
-                                                                      formatter=code_to_payload_template[1702])
+            return self.protocol_handler.pack_request(code=ProtoConsts.PKT_TICKET,
+                                                      data=ticket_data,
+                                                      formatter=code_to_payload_template[1702])
 
-            # Adjust sized and pack response
-            server_data_formatter = code_to_payload_template[ProtoConsts.RES_ENCRYPTED_AES_KEY].copy()
-            server_data_formatter.update(self.protocol_handler.update_formatter_value(formatter=server_data_formatter,
-                                                                                      pivot_key=ProtoConsts.ENCRYPTED_KEY,
-                                                                                      pivot_value=ProtoConsts.SIZE,
-                                                                                      new_value=len(packed_encrypted_key_packet)))
-            server_data_formatter.update(self.protocol_handler.update_formatter_value(formatter=server_data_formatter,
-                                                                                      pivot_key=ProtoConsts.TICKET,
-                                                                                      pivot_value=ProtoConsts.SIZE,
-                                                                                      new_value=len(packed_ticket_packet)))
-            response_data = {
-                ProtoConsts.VERSION: ProtoConsts.SERVER_VERSION,
-                ProtoConsts.CODE: ProtoConsts.RES_ENCRYPTED_AES_KEY,
-                ProtoConsts.PAYLOAD_SIZE: ProtoConsts.SIZE_CLIENT_ID + len(packed_encrypted_key_packet) + len(packed_ticket_packet),
-                ProtoConsts.CLIENT_ID: client_id,
-                ProtoConsts.ENCRYPTED_KEY: packed_encrypted_key_packet,
-                ProtoConsts.TICKET: packed_ticket_packet
-            }
-            packed_encrypted_key_response = self.protocol_handler.pack_request(code=ProtoConsts.RES_ENCRYPTED_AES_KEY,
-                                                                               data=response_data,
-                                                                               formatter=server_response)
-            # print(len(packed_encrypted_key_packet))
-            # print(len(packed_ticket_packet))
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to pack ticket packet.", exception=e)
 
-            server_socket.send_packet(sck=client_socket, packet=packed_encrypted_key_response, logger=self.logger)
-            # code, unpacked_encrypted_key_response = self.protocol_handler.unpack_request(received_packet=packed_encrypted_key_response,
-            #                                                                        formatter=server_response,
-            #                                                                        deserialize=True)
-            # #
-            # print(unpacked_encrypted_key_response['encrypted_key'])
-            # print(unpacked_encrypted_key_response['ticket'])
+    def handle_aes_key_request(self, server_socket: CustomSocket, client_socket: socket, unpacked_packet: dict,
+                               client_ram_template: dict, server_ram_template: dict, server_response: dict) -> None:
+        try:
+            # Fetch and validate needed data
+            client_nonce = unpacked_packet[ProtoConsts.NONCE]
+            Validator.validate_injection(data_type=ValConsts.FMT_NONCE, value_to_validate=client_nonce)
+            client_ram_template[ProtoConsts.NONCE] = client_nonce
+            client_id = unpacked_packet[ProtoConsts.CLIENT_ID]
+            if not isinstance(client_id, bytes):
+                client_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=client_id)
+            server_id = unpacked_packet[ProtoConsts.SERVER_ID]
+            if not isinstance(server_id, str):
+                server_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=server_id)
 
-            # TODO - get server details from DB
+            service_object = self.__get_service_object(service_id=server_id)
+
+            # In case there is no registered service
+            if service_object is None:
+
+                packet_no_payload[ProtoConsts.CODE] = ProtoConsts.RES_GENERAL_ERROR
+                packed_general_error = self.protocol_handler.pack_request(code=ProtoConsts.RES_GENERAL_ERROR,
+                                                                          data=packet_no_payload,
+                                                                          formatter=server_response.copy())
+                server_socket.send_packet(sck=client_socket, packet=packed_general_error)
+
+            else:
+                if not isinstance(server_id, bytes):
+                    server_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=server_id)
+                server_aes_key = service_object[AuthConsts.RAM_AES_KEY]
+                if not isinstance(server_aes_key, bytes):
+                    server_aes_key = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY, value_to_validate=server_aes_key)
+
+                # Pack encrypted key packet
+                packed_encrypted_key_packet = self.__pack_encrypted_key_packet(client_nonce=client_nonce)
+
+                # Pack Ticket packet
+                packed_ticket_packet = self.__pack_ticket_packet(client_id=client_id, server_id=server_id, service_aes_key=server_aes_key)
+
+                # Adjust sized and pack response
+                server_data_formatter = code_to_payload_template[ProtoConsts.RES_ENCRYPTED_AES_KEY].copy()
+                server_data_formatter.update(self.protocol_handler.update_formatter_value(formatter=server_data_formatter,
+                                                                                          pivot_key=ProtoConsts.ENCRYPTED_KEY,
+                                                                                          pivot_value=ProtoConsts.SIZE,
+                                                                                          new_value=len(packed_encrypted_key_packet)))
+                server_data_formatter.update(self.protocol_handler.update_formatter_value(formatter=server_data_formatter,
+                                                                                          pivot_key=ProtoConsts.TICKET,
+                                                                                          pivot_value=ProtoConsts.SIZE,
+                                                                                          new_value=len(packed_ticket_packet)))
+                response_data = {
+                    ProtoConsts.VERSION: ProtoConsts.SERVER_VERSION,
+                    ProtoConsts.CODE: ProtoConsts.RES_ENCRYPTED_AES_KEY,
+                    ProtoConsts.PAYLOAD_SIZE: ProtoConsts.SIZE_CLIENT_ID + len(packed_encrypted_key_packet) + len(packed_ticket_packet),
+                    ProtoConsts.CLIENT_ID: client_id,
+                    ProtoConsts.ENCRYPTED_KEY: packed_encrypted_key_packet,
+                    ProtoConsts.TICKET: packed_ticket_packet
+                }
+                packed_encrypted_key_response = self.protocol_handler.pack_request(code=ProtoConsts.RES_ENCRYPTED_AES_KEY,
+                                                                                   data=response_data,
+                                                                                   formatter=server_response)
+
+                server_socket.send_packet(sck=client_socket, packet=packed_encrypted_key_response, logger=self.logger)
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to handle encrypted key request from {client_socket.getpeername()}.", exception=e)
 
-    def __get_default_service_data(self, file_db: str, server_socket: CustomSocket,
-                                   client_socket: socket, server_response: dict) -> None:
+    def __get_default_service_data(self, server_socket: CustomSocket, client_socket: socket, server_response: dict) -> None:
         """Private method to get a default registered service data."""
         try:
-            # Validate default registered service file
-            if utils.check_if_exists(file_db):
-
-                # Parse and validate default service data
-                ip_and_port = utils.parse_info_file(file_path=file_db,
-                                                    target_line_number=MsgConsts.LINE_IP_PORT)
+            # Parse and validate default registered service file
+            default_service_data = self.__parse_msg_info_file()
+            if default_service_data:
+                ip_and_port, server_name, server_id, server_aes_key = default_service_data
                 server_ip, server_port = Validator.validate_injection(data_type=ValConsts.FMT_IPV4_PORT, value_to_validate=ip_and_port)
-                server_id = utils.parse_info_file(file_path=file_db, target_line_number=MsgConsts.LINE_ID)
                 if not isinstance(server_id, bytes):
                     server_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=server_id)
-
-                server_name = utils.parse_info_file(file_path=file_db, target_line_number=MsgConsts.LINE_NAME)
-                Validator.validate_injection(data_type=ValConsts.FMT_NAME, value_to_validate=server_name)
 
                 # Add default service data to the list
                 self.msg_server_list.append({
@@ -293,7 +369,7 @@ class AuthServerLogic:
                     ProtoConsts.SERVER_IP: server_ip,
                     ProtoConsts.SERVER_PORT: server_port
                 })
-                print(self.msg_server_list)
+
             # Default service data file doesn't exists
             else:
                 packet_no_payload[ProtoConsts.CODE] = ProtoConsts.RES_GENERAL_ERROR
@@ -331,8 +407,7 @@ class AuthServerLogic:
         try:
             # In case of services registration process failure
             if not self.msg_server_list:
-                self.__get_default_service_data(file_db=MsgConsts.MSG_FILE_NAME, server_socket=server_socket,
-                                                client_socket=client_socket, server_response=server_response)
+                self.__get_default_service_data(server_socket=server_socket, client_socket=client_socket, server_response=server_response)
 
             # Get services list packed data
             packed_services_list = self.__get_services_packed_list_data()
