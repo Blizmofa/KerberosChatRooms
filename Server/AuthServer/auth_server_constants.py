@@ -1,7 +1,7 @@
 from os import path as os_path
 
 
-class Constants:
+class AuthConsts:
 
     # Port related constants
     PORT_FILE_NAME = "port.info"
@@ -13,8 +13,11 @@ class Constants:
     FILES_DIR_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{FILES_DIR_NAME}"
     CLIENTS_FILE_NAME = "clients.txt"
     CLIENTS_FILE_PATH = f"{FILES_DIR_PATH}\{CLIENTS_FILE_NAME}"
-    SERVERS_FILE_NAME = "servers.json"
-    SERVERS_FILE_PATH = f"{FILES_DIR_PATH}\{SERVERS_FILE_NAME}"
+    SERVICES_FILE_NAME = "services.json"
+    SERVICES_FILE_PATH = f"{FILES_DIR_PATH}\{SERVICES_FILE_NAME}"
+    INDEX_CLIENT_HEX_ID = 0
+    INDEX_CLIENT_NAME = 1
+    INDEX_CLIENT_PASSWORD_HASH = 2
 
     # RAM template constants
     FMT_ME = '{}'
@@ -26,6 +29,7 @@ class Constants:
     RAM_PASSWORD_HASH = "password_hash"
     RAM_PASSWORD_HASH_HEX = "password_hash_hex"
     RAM_LAST_SEEN = "last_seen"
+    RAM_IS_REGISTERED = "is_registered"
     RAM_AES_KEY = "aes_key"
     RAM_AES_KEY_HEX = "aes_key_hex"
     RAM_SERVER_IP = "server_ip"
@@ -91,38 +95,40 @@ Auxiliary data structures templates.
 
 # Dictionary format for saving clients data in RAM memory
 ram_clients_template = {
-    Constants.RAM_CLIENT_ID: Constants.FMT_ME,
-    Constants.RAM_CLIENT_ID_HEX: Constants.FMT_ME,
-    Constants.RAM_CLIENT_NAME: Constants.FMT_ME,
-    Constants.RAM_PASSWORD_HASH: Constants.FMT_ME,
-    Constants.RAM_PASSWORD_HASH_HEX: Constants.FMT_ME,
-    Constants.RAM_LAST_SEEN: Constants.FMT_ME
+    AuthConsts.RAM_CLIENT_ID: AuthConsts.FMT_ME,
+    AuthConsts.RAM_CLIENT_ID_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
+    AuthConsts.RAM_PASSWORD_HASH: AuthConsts.FMT_ME,
+    AuthConsts.RAM_PASSWORD_HASH_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_LAST_SEEN: AuthConsts.FMT_ME,
+    AuthConsts.RAM_IS_REGISTERED: AuthConsts.FMT_ME,
 }
 
 # Dictionary format for saving servers data in RAM memory
 ram_servers_template = {
-    Constants.RAM_SERVER_ID: Constants.FMT_ME,
-    Constants.RAM_SERVER_ID_HEX: Constants.FMT_ME,
-    Constants.RAM_CLIENT_NAME: Constants.FMT_ME,
-    Constants.RAM_AES_KEY: Constants.FMT_ME,
-    Constants.RAM_AES_KEY_HEX: Constants.FMT_ME,
-    Constants.RAM_SERVER_IP: Constants.FMT_ME,
-    Constants.RAM_SERVER_PORT: Constants.FMT_ME
+    AuthConsts.RAM_SERVER_ID: AuthConsts.FMT_ME,
+    AuthConsts.RAM_SERVER_ID_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
+    AuthConsts.RAM_AES_KEY: AuthConsts.FMT_ME,
+    AuthConsts.RAM_AES_KEY_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_SERVER_IP: AuthConsts.FMT_ME,
+    AuthConsts.RAM_SERVER_PORT: AuthConsts.FMT_ME,
+    AuthConsts.RAM_IS_REGISTERED: AuthConsts.FMT_ME
 }
 
 # Dictionary format for saving clients data in file DB
 file_db_clients_template = {
-    Constants.RAM_CLIENT_ID_HEX: Constants.FMT_ME,
-    Constants.RAM_CLIENT_NAME: Constants.FMT_ME,
-    Constants.RAM_PASSWORD_HASH_HEX: Constants.FMT_ME,
-    Constants.RAM_LAST_SEEN: Constants.FMT_ME
+    AuthConsts.RAM_CLIENT_ID_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
+    AuthConsts.RAM_PASSWORD_HASH_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_LAST_SEEN: AuthConsts.FMT_ME
 }
 
 # Dictionary format for saving servers data in file DB
 file_db_servers_template = {
-    Constants.RAM_SERVER_ID_HEX: Constants.FMT_ME,
-    Constants.RAM_CLIENT_NAME: Constants.FMT_ME,
-    Constants.RAM_AES_KEY_HEX: Constants.FMT_ME,
-    Constants.RAM_SERVER_IP: Constants.FMT_ME,
-    Constants.RAM_SERVER_PORT: Constants.FMT_ME
+    AuthConsts.RAM_SERVER_ID_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
+    AuthConsts.RAM_AES_KEY_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_SERVER_IP: AuthConsts.FMT_ME,
+    AuthConsts.RAM_SERVER_PORT: AuthConsts.FMT_ME
 }

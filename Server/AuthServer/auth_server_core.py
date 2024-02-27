@@ -1,12 +1,13 @@
 from Socket.custom_socket import socket, Thread
-from Server.server_interface import ServerInterface
+from Utils import utils
 from Utils.logger import Logger, CustomFilter
-from Utils.utils import create_if_not_exists, time_now, write_with_color, Colors
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
-from Server.AuthServer.auth_server_constants import Constants, ram_clients_template, ram_servers_template
+from Utils.validator import Validator, ValConsts as ValConsts
+from Server.server_interface import ServerInterface
+from Server.AuthServer.auth_server_constants import ram_clients_template, ram_servers_template, AuthConsts as AuthConsts
 from Server.AuthServer.auth_server_logic import AuthServerLogic
 from Protocol_Handler.protocol_handler import ProtocolHandler
-from Protocol_Handler.protocol_utils import server_request, server_response, packet_no_payload, ProtocolConstants as ProtoConsts
+from Protocol_Handler.protocol_utils import server_request, server_response, ProtoConsts
 
 
 class AuthServerCore(ServerInterface):
@@ -30,44 +31,87 @@ class AuthServerCore(ServerInterface):
         """Setups Auth Server files databases."""
         try:
             # For Files root directory
-            create_if_not_exists(path_to_create=Constants.FILES_DIR_PATH, is_dir=True)
+            utils.create_if_not_exists(path_to_create=AuthConsts.FILES_DIR_PATH, is_dir=True)
 
             # For clients data
-            create_if_not_exists(path_to_create=Constants.CLIENTS_FILE_PATH, is_file=True)
+            utils.create_if_not_exists(path_to_create=AuthConsts.CLIENTS_FILE_PATH, is_file=True)
 
             # For servers data
-            create_if_not_exists(path_to_create=Constants.SERVERS_FILE_PATH, is_file=True)
+            utils.create_if_not_exists(path_to_create=AuthConsts.SERVICES_FILE_PATH, is_file=True)
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to setup {self.__class__.__name__}.", exception=e)
 
-    def handle_new_connection(self, sck: socket) -> None:
+    def __load_client_data_into_ram_db(self, client_id: bytes, ram_template: dict) -> dict:
+        """Private method to fetch Client entry from file DB and load it into RAM DB."""
+        try:
+            client_id_hex = client_id.hex()
+            if not utils.search_value_in_txt_file(value=client_id_hex, file_path=AuthConsts.CLIENTS_FILE_PATH):
+                return ram_template
+
+            # Fetch client entry
+            client_entry = utils.fetch_value_from_txt_db(file_path=AuthConsts.CLIENTS_FILE_PATH,
+                                                         target_value=client_id_hex).split(': ')
+            # Load entry into RAM template
+            ram_template[AuthConsts.RAM_CLIENT_ID] = client_id
+            ram_template[AuthConsts.RAM_CLIENT_ID_HEX] = client_id_hex
+            ram_template[AuthConsts.RAM_CLIENT_NAME] = client_entry[AuthConsts.INDEX_CLIENT_NAME]
+            password_hash = client_entry[AuthConsts.INDEX_CLIENT_PASSWORD_HASH]
+            if isinstance(password_hash, str):
+                ram_template[AuthConsts.RAM_PASSWORD_HASH_HEX] = password_hash
+                password_hash = Validator.validate_injection(data_type=ValConsts.FMT_PASSWORD,
+                                                             value_to_validate=password_hash)
+                ram_template[AuthConsts.RAM_PASSWORD_HASH] = password_hash
+            ram_template[AuthConsts.RAM_IS_REGISTERED] = True
+
+            # For dev mode
+            if self.debug_mode:
+                print(utils.write_with_color(msg=f"Client RAM Template --> {ram_template}", color=utils.Colors.CYAN))
+
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to load client data into RAM DB.", exception=e)
+
+    def handle_peer(self, sck: socket, ram_template: dict) -> None:
         """Handles a new connection according to the communication protocol."""
         try:
             # Insert new connection
-            self.new_connection(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
+            self.add_new_connection(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
 
-            # TODO - load data from clients.txt and validate with new_connection. auth server protocol instructions #3
-            # TODO - load it to ram template, its enough
-
-            # Create new client RAM DB
-            client_ram_template = ram_clients_template.copy()
-            client_ram_template[Constants.RAM_LAST_SEEN] = time_now()
+            # Update RAM DB
+            ram_template[AuthConsts.RAM_LAST_SEEN] = utils.time_now()
+            ram_template[AuthConsts.RAM_IS_REGISTERED] = False
 
             # Create new server RAM DB
-            server_ram_template = ram_servers_template
+            server_ram_template = ram_servers_template.copy()
+            server_ram_template[AuthConsts.RAM_IS_REGISTERED] = False
 
             # Receive requests from clients/services
             while True:
+
+                # Monitor peers connections
+                if not self.custom_socket.monitor_connection(sck=sck):
+                    self.cleanup(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
+
+                # Received request
                 auth_server_request = self.custom_socket.receive_packet(sck=sck, logger=self.logger)
+
+                # Peer has disconnected
+                if not auth_server_request:
+                    break
+
+                # Unpack request
                 request_code, unpacked = self.protocol_handler.unpack_request(received_packet=auth_server_request,
                                                                               formatter=server_request.copy(),
                                                                               deserialize=True)
-
                 # For dev mode:
                 if self.debug_mode:
-                    print(write_with_color(msg=f"Received Request --> Code: {request_code}, Data: {unpacked}",
-                                           color=Colors.MAGENTA))
+                    print(utils.write_with_color(msg=f"Received Request --> Code: {request_code}, Data: {unpacked}",
+                                                 color=utils.Colors.MAGENTA))
+
+                # Check if client already registered
+                client_id = unpacked[ProtoConsts.CLIENT_ID]
+                if client_id:
+                    self.__load_client_data_into_ram_db(client_id=client_id, ram_template=ram_template)
 
                 # Handle register requests from Clients and Services
                 if request_code == ProtoConsts.REQ_CLIENT_REG or request_code == ProtoConsts.REQ_SERVER_REG:
@@ -76,46 +120,50 @@ class AuthServerCore(ServerInterface):
                                                                        client_socket=sck,
                                                                        request_code=request_code,
                                                                        unpacked_packet=unpacked,
-                                                                       client_ram_template=client_ram_template,
+                                                                       client_ram_template=ram_template,
                                                                        server_ram_template=server_ram_template,
                                                                        server_response=server_response.copy())
                     # For dev mode
                     if self.debug_mode:
-                        print(write_with_color(msg=f"Registered client template --> {client_ram_template}", color=Colors.CYAN))
-                        print(write_with_color(msg=f"Registered server template --> {server_ram_template}", color=Colors.CYAN))
+                        print(utils.write_with_color(msg=f"Registered client template --> {ram_template}",
+                                                     color=utils.Colors.CYAN))
+                        print(utils.write_with_color(msg=f"Registered server template --> {server_ram_template}",
+                                                     color=utils.Colors.CYAN))
 
                 # Handle AES key request from client
                 elif request_code == ProtoConsts.REQ_AES_KEY:
                     self.auth_server_logic.handle_aes_key_request(server_socket=self.custom_socket,
                                                                   client_socket=sck,
                                                                   unpacked_packet=unpacked,
-                                                                  client_ram_template=client_ram_template,
+                                                                  client_ram_template=ram_template,
                                                                   server_response=server_response.copy())
 
                     # For dev mode
                     if self.debug_mode:
-                        print(write_with_color(msg=f"AES key client template --> {client_ram_template}",
-                                               color=Colors.CYAN))
+                        print(utils.write_with_color(msg=f"AES key client template --> {ram_template}",
+                                                     color=utils.Colors.CYAN))
 
                 # Handle services list request from client
                 elif request_code == ProtoConsts.REQ_MSG_SERVERS_LIST:
 
                     self.auth_server_logic.handle_services_list_request(server_socket=self.custom_socket,
                                                                         client_socket=sck,
+                                                                        client_ram_template=ram_template,
                                                                         server_response=server_response.copy())
                 # Send general server error in any other case
                 else:
                     self.auth_server_logic.send_server_general_error(server_socket=self.custom_socket,
                                                                      client_socket=sck,
                                                                      server_response=server_response.copy())
+                    self.cleanup(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
                     raise ValueError(f"Unsupported request code {request_code}.")
 
-            # TODO - create json file for each client according to his uuid json summery of all his and the server session
         except Exception as e:
+            self.logger.logger.error(msg=str(e))
             raise CustomException(error_msg=f"Unable to handle client {sck.getpeername()}.", exception=e)
 
-    # TODO - move server run method to interface for all servers
     def run(self) -> None:
+        """Auth Server main run method."""
         try:
             # Initialize Server
             self.setup_server(sck=self.server_socket)
@@ -126,9 +174,12 @@ class AuthServerCore(ServerInterface):
             # Set Logger custom filter
             CustomFilter.filter_name = get_calling_method_name()
 
+            # Create new client RAM DB
+            client_ram_template = ram_clients_template.copy()
+
             # Print welcome message
-            print(Constants.KERBEROS_LOGO, end='\n\n')
-            print(Constants.AUTH_SERVER_LOGO, end='\n\n')
+            print(AuthConsts.KERBEROS_LOGO, end='\n\n')
+            print(AuthConsts.AUTH_SERVER_LOGO, end='\n\n')
             print(f"{ProtoConsts.CONSOLE_ACK} Starting Server...")
             print(f"{ProtoConsts.CONSOLE_ACK} Server is now listening on {self.ip_address}:{self.port}")
 
@@ -138,7 +189,7 @@ class AuthServerCore(ServerInterface):
                 print(f"{ProtoConsts.CONSOLE_ACK} Connected to peer {connection.getpeername()}")
 
                 # Assign new thread to each connected client
-                client_thread = Thread(target=self.handle_new_connection, args=(connection,))
+                client_thread = Thread(target=self.handle_peer, args=(connection, client_ram_template))
                 client_thread.start()
                 self.threads.append(client_thread)
 
