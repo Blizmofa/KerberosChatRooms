@@ -7,7 +7,7 @@ from Utils.encryptor import Encryptor
 from Protocol_Handler.protocol_utils import ProtoConsts, code_to_payload_template
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Server.AuthServer.auth_server_constants import AuthConsts
-from Server.AuthServer.handle_services_list_request import ServicesHandler
+from Server.AuthServer.services_handler import ServicesHandler
 from Server.MsgServer.msg_server_constants import MsgConsts
 
 

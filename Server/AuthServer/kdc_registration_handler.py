@@ -1,12 +1,12 @@
 from Utils import utils
 from Utils.logger import Logger, CustomFilter
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
-from Utils.validator import Validator, ValConsts as ValConsts
+from Utils.validator import Validator, ValConsts
 from Utils.encryptor import Encryptor
 from Socket.custom_socket import socket
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Protocol_Handler.protocol_utils import packet_no_payload, packet_register_success, ProtoConsts as ProtoConsts
-from Server.AuthServer.auth_server_constants import file_db_clients_template, file_db_servers_template, AuthConsts as AuthConsts
+from Server.AuthServer.auth_server_constants import file_db_clients_template, file_db_servers_template, AuthConsts
 
 
 class RegistrationHandler:
