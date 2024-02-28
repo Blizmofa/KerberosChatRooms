@@ -1,18 +1,22 @@
+from sys import exit as sys_exit
+from struct import unpack, calcsize
+from Utils.utils import write_with_color, Colors, fetch_entry_from_json_db
+from Utils.custom_exception_handler import CustomException, get_calling_method_name
+from Utils.logger import Logger, CustomFilter
+from Utils.validator import Validator, ValConsts
+from Utils.encryptor import Encryptor
 from Socket.custom_socket import socket, Thread
 from Server.server_interface import ServerInterface
-from Utils.custom_exception_handler import CustomException
-from Utils.logger import Logger
-from Server.MsgServer.msg_server_logic import MsgServerLogic
-from Server.MsgServer.msg_server_constants import ram_service_template, Constants as MsgConsts
-from Utils import utils
-from Utils.validator import Validator, Constants as ValConsts
-import os
-from Utils.encryptor import Encryptor
+from Server.MsgServer.msg_server_constants import ram_service_template, MsgConsts
+from Server.MsgServer.service_registration_handler import RegistrationHandler
+from Server.MsgServer.symmetric_key_handler import SymmetricKeyHandler
 from Protocol_Handler.protocol_handler import ProtocolHandler
-from Protocol_Handler.protocol_utils import server_request, server_response, ProtocolConstants as ProtoConsts
+from Protocol_Handler.protocol_utils import server_request, server_response, packet_no_payload, ProtoConsts
 
 
-class MsgServer(ServerInterface):
+class MsgServerCore(ServerInterface):
+    """Handles the Msg Server core functionalities."""
+
     def __init__(self, connection_protocol: str, ip_address: str, port: int, service_name: str, debug_mode: bool) -> None:
         super().__init__(connection_protocol, ip_address, port, debug_mode)
         self.ip_address = ip_address
@@ -27,135 +31,86 @@ class MsgServer(ServerInterface):
         self.logger = Logger(logger_name=self.__class__.__name__, debug_mode=debug_mode)
         self.protocol_handler = ProtocolHandler(debug_mode=debug_mode)
         self.encryptor = Encryptor(debug_mode=debug_mode)
-        self.msg_server_logic = MsgServerLogic(debug_mode=debug_mode)
+        self.registration_handler = RegistrationHandler(debug_mode=debug_mode)
+        self.symmetric_key_handler = SymmetricKeyHandler(debug_mode=debug_mode)
 
-    def setup_as_client(self):
-        """Setups the Msg Server as a client in order to register to Authentication server."""
+    def setup_as_client(self) -> None:
+        """Setups the Msg Server as a client in order to register to AS."""
         try:
-
-            self.client_socket.connect((self.ip_address, self.port))
+            self.custom_socket.connect(sck=self.client_socket, ip_address=self.ip_address, port=self.port)
             self.logger.logger.info(f"Connected to {self.ip_address}:{self.port} successfully.")
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to setup {self.__class__.__name__} as client", exception=e)
 
-    def create_default_msg_server(self) -> None:
-        """Creates a registered default Msg server in case of system failure."""
-        try:
-            # Create default server data
-            default_server_id = utils.generate_uuid()
-            default_aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
-
-            msg_info_data = {
-                ValConsts.FMT_IPV4_PORT: f"{MsgConsts.DEF_IP_ADDRESS}:{MsgConsts.DEF_PORT_NUM}",
-                ValConsts.FMT_NAME: f"{MsgConsts.DEF_SERVER_NAM_FMT}{utils.generate_random_num(lower_bound=11, upper_bound=19)}",
-                ValConsts.FMT_ID: default_server_id.hex(),
-                ValConsts.FMT_AES_KEY: self.encryptor.encode_decode_base64(value=default_aes_key,
-                                                                           mode=ProtoConsts.ENCODE)
-            }
-
-            # Register default server
-            utils.create_info_file(file_name=f"{MsgConsts.MSG_FILE_NAME}", file_data=msg_info_data)
-
-        except Exception as e:
-            raise CustomException(error_msg=f"Unable to create default {self.__class__.__name__}.", exception=e)
-
-    def handle_new_client(self, sck: socket) -> None:
+    def handle_peer(self, sck: socket, ram_template: dict) -> None:
+        """Starts the Chat Room."""
         try:
             # Insert new connection
-            self.new_connection(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
+            self.add_new_connection(sck=sck,
+                                    connections_list=self.connections_list,
+                                    active_connections=self.active_connections)
 
-            # TODO - close socket to auth server
-            # TODO - Unpack packet
-            # TODO - handle encrypted key request from client 1028, unpack authenticator and ticket
-            # TODO - handle client msg request --> chat mode
+            # Log
+            CustomFilter.filter_name = get_calling_method_name()
+            msg = f"{sck.getpeername()} has entered the chat."
+            self.logger.logger.info(msg=msg)
 
-            # # Create new client RAM DB
-            # client_ram_template = ram_service_template.copy()
-            
-            # Handle Symmetric Key 1028 request
-            symmetric_key_request = self.custom_socket.receive_packet(sck=sck, logger=self.logger)
+            # For dev mode
+            if self.debug_mode:
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} {msg}", color=Colors.GREEN))
 
-            # Enter chat mode
+            # Start chat
+            while True:
 
-            # self.msg_server_logic.handle_registration_request(sck=sck, client_ram_template=client_ram_template, register_request=symmetric_key_request)
+                # Monitor peers connections
+                if not self.custom_socket.monitor_connection(sck=sck):
+                    self.cleanup(sck=sck,
+                                 connections_list=self.connections_list,
+                                 active_connections=self.active_connections)
+
+                # Receive encrypted message request
+                msg_request = self.custom_socket.receive_packet(sck=sck, logger=self.logger)
+
+                # Peer has disconnected
+                if not msg_request:
+                    break
+
+                # Adjust sizes to get encrypted message content
+                msg_formatter = self.protocol_handler.build_packet_format(code=ProtoConsts.PKT_ENC_MSG_WITHOUT_CONTENT,
+                                                                          formatter=server_request.copy())
+                msg_fmt = self.protocol_handler.generate_packet_fmt(raw_packet=msg_formatter)
+                msg_content_size = len(msg_request[calcsize(msg_fmt):])
+
+                # Unpack encrypted message packet
+                unpacked_msg_request = unpack(f"{msg_fmt}{msg_content_size}s", msg_request)
+                client_id, version, code, payload_size, msg_size, msg_iv, msg_content = unpacked_msg_request
+
+                # Fetch and validate service AES key
+                aes_key = ram_template[MsgConsts.RAM_AES_KEY]
+                Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY, value_to_validate=aes_key)
+
+                # Decrypt message and print to screen
+                decrypted_msg = self.encryptor.decrypt(encrypted_value=msg_content,
+                                                       decryption_key=aes_key,
+                                                       iv=msg_iv).decode()
+                print(decrypted_msg)
+
+                packet_no_payload[ProtoConsts.CODE] = ProtoConsts.RES_MSG_ACK
+                packed_msg_ack = self.protocol_handler.pack_request(code=ProtoConsts.RES_AES_KEY_ACK,
+                                                                    data=packet_no_payload,
+                                                                    formatter=server_response.copy())
+                self.custom_socket.send_packet(sck=sck, packet=packed_msg_ack, logger=self.logger)
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to handle client {sck.getpeername()}.", exception=e)    
 
-    def handle_registration_request(self, service_ram_template: dict, server_request_formatter: dict, server_response_formatter: dict) -> bool:
+    def setup_as_chat_room(self, service_ram_template: dict) -> None:
         try:
-            # Create service AES key and update RAM DB
-            msg_server_aes_key = self.encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
-            service_ram_template[MsgConsts.RAM_AES_KEY] = msg_server_aes_key
-            service_ram_template[MsgConsts.RAM_AES_KEY_HEX] = msg_server_aes_key.hex()
+            # Get DNS mapping from RAM
+            self.ip_address = service_ram_template[MsgConsts.RAM_IP_ADDRESS]
+            self.port = service_ram_template[MsgConsts.RAM_PORT]
 
-            # Create packet data frame
-            data = {
-                ProtoConsts.CLIENT_ID: None,
-                ProtoConsts.VERSION: ProtoConsts.SERVER_VERSION,
-                ProtoConsts.CODE: ProtoConsts.REQ_SERVER_REG,
-                ProtoConsts.PAYLOAD_SIZE: ProtoConsts.SIZE_SERVER_NAME + ProtoConsts.SIZE_AES_KEY,
-                ProtoConsts.NAME: self.service_name,
-                ProtoConsts.AES_KEY: msg_server_aes_key
-            }
-
-            # Pack and send register request
-            packed_register_request = self.protocol_handler.pack_request(code=ProtoConsts.REQ_SERVER_REG,
-                                                                         data=data,
-                                                                         formatter=server_request_formatter)
-            self.custom_socket.send_packet(sck=self.client_socket, packet=packed_register_request, logger=self.logger)
-
-            # Receive register response, unpack and deserialize packet data
-            register_response = self.custom_socket.receive_packet(sck=self.client_socket)
-            response_code, unpacked_register_response = self.protocol_handler.unpack_request(received_packet=register_response,
-                                                                                             formatter=server_response_formatter,
-                                                                                             deserialize=True)
-            # For dev mode
-            if self.debug_mode:
-                print(utils.write_with_color(
-                    msg=f"Received Response --> Code: {response_code}, Data: {unpacked_register_response}",
-                    color=utils.Colors.MAGENTA))
-
-            # Register success
-            if response_code == ProtoConsts.RES_REGISTER_SUCCESS:
-
-                service_id = unpacked_register_response[ProtoConsts.CLIENT_ID]
-                service_ram_template[MsgConsts.RAM_SERVICE_ID] = service_id
-                service_ram_template[MsgConsts.RAM_SERVICE_ID_HEX] = service_id.hex()
-
-                # Update the new DNS mapping ip and port
-                self.ip_address, self.port = self.client_socket.getsockname()
-
-                service_ram_template[MsgConsts.RAM_IP_ADDRESS] = self.ip_address
-                service_ram_template[MsgConsts.RAM_PORT] = self.port
-                service_ram_template[MsgConsts.RAM_IS_REGISTERED] = True
-                print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} Registration successful.",
-                                             color=utils.Colors.GREEN))
-
-                # Update services JSON db
-                utils.insert_data_to_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_NAME,
-                                             data=service_ram_template,
-                                             pivot_key=MsgConsts.RAM_SERVICE_NAME,
-                                             pivot_value=self.service_name)
-                return True
-
-            elif response_code == ProtoConsts.RES_REGISTER_FAILED:
-                print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_FAIL} Registration failure.",
-                                             color=utils.Colors.RED))
-                return False
-
-        except Exception as e:
-            # Register default server
-            self.create_default_msg_server()
-            raise CustomException(error_msg=f"Unable to handle registration request.", exception=e)
-
-        finally:
-            # Close socket to Auth Server
-            self.client_socket.close()
-
-    def setup_as_msg_server(self):
-        try:
             # Initialize Server
             self.setup_server(sck=self.service_socket)
 
@@ -169,12 +124,24 @@ class MsgServer(ServerInterface):
                 connection, address = self.service_socket.accept()
                 print(f"{ProtoConsts.CONSOLE_ACK} Connected to peer {connection.getpeername()}")
 
-                # Assign new thread to each connected client
-                client_thread = Thread(target=self.handle_new_client, args=(connection, ))
-                client_thread.start()
-                self.threads.append(client_thread)
+                # Handle Symmetric Key requests from clients
+                if self.symmetric_key_handler.handle_symmetric_key_request(sck=self.custom_socket,
+                                                                           client_socket=connection,
+                                                                           ram_template=service_ram_template,
+                                                                           encryptor=self.encryptor,
+                                                                           protocol_handler=self.protocol_handler):
+
+                    # Assign new thread to each connected client and enter chat mode
+                    client_thread = Thread(target=self.handle_peer, args=(connection, service_ram_template))
+                    client_thread.start()
+                    self.threads.append(client_thread)
+                else:
+                    # TODO - return server error
+                    pass
 
         except Exception as e:
+            self.logger.logger.error(str(e))
+
             # Cleanup
             self.service_socket.close()
             for thread in self.threads:
@@ -184,33 +151,66 @@ class MsgServer(ServerInterface):
 
     def run(self) -> None:
 
-        # Setup first as a client
-        self.setup_as_client()
+        # TODO - update services_pool DB with message and ticket iv. check that aes key is the same as the ticket key
+        # TODO - if service id in services pool, already registered, fetch id like in client case
+        # TODO - if already registered and in services_pool start service
 
         # Create service RAM template and update its values
         service_ram_template = ram_service_template.copy()
         service_ram_template[MsgConsts.RAM_SERVICE_NAME] = self.service_name
         Validator.validate_injection(data_type=ValConsts.FMT_NAME, value_to_validate=self.service_name)
 
-        # For dev mode
-        if self.debug_mode:
-            print(utils.write_with_color(msg=f"Parsed service template --> {service_ram_template}", color=utils.Colors.CYAN))
+        # Default service
+        if self.service_name == MsgConsts.DEF_SERVER_NAME:
 
-        # Create formatters templates
-        server_request_formatter = server_request.copy()
-        server_response_formatter = server_response.copy()
+            # Fetch data from file DB and update RAM DB
+            default_service_entry = fetch_entry_from_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_NAME,
+                                                             pivot_key=MsgConsts.RAM_SERVICE_NAME,
+                                                             pivot_value=self.service_name)
 
-        # Register
-        if self.handle_registration_request(service_ram_template=service_ram_template,
-                                            server_request_formatter=server_request_formatter,
-                                            server_response_formatter=server_response_formatter):
+            default_aes_key = default_service_entry[MsgConsts.RAM_AES_KEY_HEX]
+            default_server_id = default_service_entry[MsgConsts.RAM_SERVICE_ID_HEX]
+            if isinstance(default_aes_key, str):
+                default_service_entry[MsgConsts.RAM_AES_KEY] = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY,
+                                                                                            value_to_validate=default_aes_key)
+            if isinstance(default_server_id, str):
+                default_service_entry[MsgConsts.RAM_SERVICE_ID] = Validator.validate_injection(data_type=ValConsts.FMT_ID,
+                                                                                               value_to_validate=default_server_id)
+            service_ram_template.update(default_service_entry)
+
             # For dev mode
             if self.debug_mode:
-                print(utils.write_with_color(msg=f"Registered service template --> {service_ram_template}",
-                                             color=utils.Colors.CYAN))
+                print(write_with_color(msg=f"Parsed service template --> {service_ram_template}",
+                                       color=Colors.CYAN))
+
+            # Start default service
+            self.setup_as_chat_room(service_ram_template=service_ram_template)
+
+        # Service Manager services
+        else:
+            # Setup first as a client
+            self.setup_as_client()
+
+            # Register
+            if not self.registration_handler.handle_registration_request(sck=self.custom_socket,
+                                                                         client_socket=self.client_socket,
+                                                                         ram_template=service_ram_template,
+                                                                         service_name=self.service_name,
+                                                                         encryptor=self.encryptor,
+                                                                         protocol_handler=self.protocol_handler):
+
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_FAIL} Register to Auth server has failed, "
+                                           f"shutting down", color=Colors.RED))
+                self.client_socket.close()
+                sys_exit(ProtoConsts.STATUS_ERROR_CODE)
+
+            # For dev mode
+            if self.debug_mode:
+                print(write_with_color(msg=f"Registered service template --> {service_ram_template}",
+                                       color=Colors.CYAN))
 
             # Initialize Server as a service only on registration success
-            self.setup_as_msg_server()
+            self.setup_as_chat_room(service_ram_template=service_ram_template)
 
 
 
