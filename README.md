@@ -8,17 +8,65 @@ to ensure secure authentication and communication between authorized users and a
 ![kerberos.png](Images/kerberos.png)
 
 ## Usage
-write about export python path if module not found error
 - Written in Python 3.9 with PyCharm on Windows 11.
-- add console for run auth server
-- add console for run msg server
-- add console for run client
-- all with arg parser examples with dev mode
+#### Run KDC with auth_server.py
+```commandline
+C:\Users\public> python3 [path_to_auth_server.py] -h
+```
+#### Register Services with msg_server.py
+```commandline
+C:\Users\public> python3 [path_to_msg_server.py] -h
+```
+#### Run Client
+```commandline
+C:\Users\public> python3 [path_to_client.py] -h
+```
+
+#### Available CLI arguments:
+```commandline
+KDC/Client optional arguments:
+  -h, --help            show this help message and exit
+  -d, --debug-mode      For more informative logs and print statements.
+                        Usage Example: python3 [path_to_main] -d/--debug_mode
+                        Default Value: False
+  -pr [PROTOCOL], --protocol [PROTOCOL]
+                        For the KDC connection protocol.
+                        Usage Example: python3 [path_to_main] -pr/--protocol [udp | tcp]
+                        Default Value: tcp
+  -ip [IP_ADDRESS], --ip-address [IP_ADDRESS]
+                        For the KDC IP Address.
+                        Usage Example: python3 [path_to_main] -ip/--ip-address [ip_address]
+                        Default Value: 127.0.0.1
+  -p [PORT], --port [PORT]
+                        For the KDC Port number.
+                        Usage Example: python3 [path_to_main] -p/--port [port_number]
+                        Default Value: 8000
+
+Msg Server additional optional arguemnts:
+  -nos [NUMBER_OF_SERVICES], --number-of-services [NUMBER_OF_SERVICES]
+                        For the number of msg services to create and register.
+                        Usage Example: python3 [path_to_main] -nos/--number-of-services [num]
+                        Default Value: 1
+  -snp [SERVICE_NAME_PREFIX], --service-name-prefix [SERVICE_NAME_PREFIX]
+                        For msg services name prefix.
+                        Usage Example: python3 [path_to_main] -snp/----service-name-prefix [prefix]
+                        Default Value: Printer
+```
+
+#### Debug Mode:
+Designed to write more logs and print colorful information for development and debug stages.
+- **Green** - struct format related output.
+- **Yellow** - struct unpack related output.
+- **Blue** - struct pack related output.
+- **Cyan** - DB related output.
+- **Magenta** - Communication protocol related output.
+![debug_mode_examples.png](Images%2Fdebug_mode_examples.png)
+
 
 ## Architecture
 Client-Server architecture that utilizes python socket library.
-
 ![software_architecture.jpg](Images%2Fsoftware_architecture.jpg)
+
 
 ### Major Components
 
@@ -51,6 +99,8 @@ Client-Server architecture that utilizes python socket library.
 #### Socket:
 * Handles all the logic for sending and receiving packets. 
 
+#### Validator:
+* Handles all validations and data types casting and conversions according to a predefined configurations. 
 
 ## Communication Protocol
 1. Binary TCP based protocol with positive number values represented as little-endian.
@@ -230,6 +280,8 @@ Request Code 1029 - Encrypted Message Request.
 | Header  | Payload size        | 4-Bytes   | Packet payload size    |
 | Payload  | Payload        | Changing   | Packet Payload         |
 
+**Payloads:**<br>
+
 Response Code 1600 - Registration Success.
 
 | Field            | Size     | Use                                  |
@@ -276,10 +328,3 @@ Response Code 1609 - Server General Error.<br>
 4. Add protocol add-ons 1700-1703 codes
 5. add comments to json files examples
 6. refactor json example for services_pool with IVs
-7. dev mode colors:
-   - Green - struct format related output
-   - Yellow - struct unpack related output
-   - Blue - struct pack related output
-   - Cyan - DB related output
-   - Magenta - Communication protocol related output
-   - insert to readme examples of dev mode run time, all the colors and custom messages
