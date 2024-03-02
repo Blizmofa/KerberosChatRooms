@@ -3,7 +3,7 @@ from typing import Union, Optional
 
 
 class ProtocolHandlerInterfaces(ABC):
-    """Protocol Handler Interfaces Class is an auxiliary class to improve server performances."""
+    """Auxiliary interface to improve Protocol Handler performances."""
 
     @abstractmethod
     def pack_request(self, code: int, data: dict, formatter: dict) -> bytes:
