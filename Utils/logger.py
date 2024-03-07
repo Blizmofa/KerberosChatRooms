@@ -1,5 +1,5 @@
-from logging import getLogger, basicConfig, INFO, DEBUG, Filter
 from os import path
+from logging import getLogger, basicConfig, INFO, DEBUG, Filter
 
 
 LOG_FILE_FMT = "[%(asctime)s] - [%(name)s] - [%(levelname)s] --- [%(custom_attribute)s]: %(message)s"

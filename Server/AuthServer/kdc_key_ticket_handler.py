@@ -4,10 +4,11 @@ from Utils.validator import Validator, ValConsts
 from Utils.logger import Logger, CustomFilter
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Utils.encryptor import Encryptor
-from Protocol_Handler.protocol_utils import ProtoConsts, code_to_payload_template
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import code_to_payload_template
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Server.AuthServer.auth_server_constants import AuthConsts
-from Server.AuthServer.services_handler import ServicesHandler
+from Server.AuthServer.kdc_services_handler import ServicesHandler
 from Server.MsgServer.msg_server_constants import MsgConsts
 
 
@@ -53,7 +54,7 @@ class KeyTicketHandler:
         except Exception as e:
             raise CustomException(error_msg=f"Unable to get client wanted service.", exception=e)
 
-    def pack_encrypted_key_packet(self, client_ram_template: dict, client_nonce: bytes, service_object: dict,
+    def pack_encrypted_key_packet(self, client_ram_template: dict, client_nonce: bytes, kdc_aes_key: bytes,
                                   encryptor: Encryptor, protocol_handler: ProtocolHandler) -> bytes:
         """Returns the packed Encrypted Key packet."""
         try:
@@ -61,11 +62,12 @@ class KeyTicketHandler:
             password_hash = client_ram_template[AuthConsts.RAM_PASSWORD_HASH]
 
             # Fetch the selected service AES key
-            client_aes_key = service_object[AuthConsts.RAM_AES_KEY]
+            # client_aes_key = encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
+            # client_aes_key = service_object[AuthConsts.RAM_AES_KEY]
 
             # Encrypt packet content
             encrypted_key_iv = encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_IV)
-            encrypted_aes_key = encryptor.encrypt(value=client_aes_key,
+            encrypted_aes_key = encryptor.encrypt(value=kdc_aes_key,
                                                   encryption_key=password_hash,
                                                   iv=encrypted_key_iv)
             encrypted_nonce = encryptor.encrypt(value=client_nonce,
@@ -88,7 +90,7 @@ class KeyTicketHandler:
         except Exception as e:
             raise CustomException(error_msg=f"Unable to pack encrypted key packet.", exception=e)
 
-    def pack_ticket_packet(self, client_id: bytes, server_id: bytes, service_aes_key: bytes,
+    def pack_ticket_packet(self, client_id: bytes, server_id: bytes, service_aes_key: bytes, kdc_aes_key: bytes,
                            encryptor: Encryptor, protocol_handler: ProtocolHandler) -> bytes:
         """Returns the packed Ticket packet."""
         try:
@@ -101,7 +103,7 @@ class KeyTicketHandler:
             encrypted_creation_time = encryptor.encrypt(value=creation_time,
                                                         encryption_key=service_aes_key,
                                                         iv=ticket_iv)
-            encrypted_ticket_aes_key = encryptor.encrypt(value=service_aes_key,
+            encrypted_ticket_aes_key = encryptor.encrypt(value=kdc_aes_key,
                                                          encryption_key=service_aes_key,
                                                          iv=ticket_iv)
             encrypted_ticket_expiration_time = encryptor.encrypt(value=expiration_time,

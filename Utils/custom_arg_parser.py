@@ -1,5 +1,5 @@
-from argparse import ArgumentParser, RawTextHelpFormatter, SUPPRESS, Namespace
 from typing import Optional
+from argparse import ArgumentParser, RawTextHelpFormatter, SUPPRESS, Namespace
 
 
 class CustomArgParser(ArgumentParser):
@@ -21,7 +21,7 @@ class CustomArgParser(ArgumentParser):
     @staticmethod
     def format_arg_help(general_description: str, usage_example: str, default_value: Optional[str] = None) -> str:
         """Format help for arguments."""
-        default_value_str = f"Default Value: {default_value}" if default_value is not None else '%(default)s'
+        default_value_str = f"Default Value: {default_value if default_value is not None else '%(default)s'}"
         return f"{general_description}\nUsage Example: {usage_example}\n{default_value_str}"
 
     @staticmethod
