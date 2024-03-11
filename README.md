@@ -63,7 +63,7 @@ Designed to write more logs and print colorful information for development and d
 ![debug_mode_examples.png](Images%2Fdebug_mode_examples.png)
 
 ## Demo
-[demo-highlight.mp4](Images%2Fdemo-highlight.mp4)
+![demo.gif](Images%2Fdemo.gif)
 
 ## Architecture
 Client-Server architecture that utilizes python socket library.
