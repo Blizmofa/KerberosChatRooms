@@ -6,22 +6,24 @@ from Utils.logger import Logger, CustomFilter
 from Utils.validator import Validator, ValConsts
 from Utils.encryptor import Encryptor
 from Socket.custom_socket import socket, Thread
+from Protocol_Handler.protocol_handler import ProtocolHandler
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import server_request, server_response, packet_no_payload
 from Server.server_interface import ServerInterface
 from Server.MsgServer.msg_server_constants import ram_service_template, MsgConsts
 from Server.MsgServer.service_registration_handler import RegistrationHandler
-from Server.MsgServer.symmetric_key_handler import SymmetricKeyHandler
-from Protocol_Handler.protocol_handler import ProtocolHandler
-from Protocol_Handler.protocol_utils import server_request, server_response, packet_no_payload, ProtoConsts
+from Server.MsgServer.service_symmetric_key_handler import SymmetricKeyHandler
 
 
 class MsgServerCore(ServerInterface):
     """Handles the Msg Server core functionalities."""
 
-    def __init__(self, connection_protocol: str, ip_address: str, port: int, service_name: str, debug_mode: bool) -> None:
+    def __init__(self, connection_protocol: str, ip_address: str, port: int, service_name: str, is_registered: bool, debug_mode: bool) -> None:
         super().__init__(connection_protocol, ip_address, port, debug_mode)
         self.ip_address = ip_address
         self.port = port
         self.service_name = service_name
+        self.is_registered = is_registered
         self.debug_mode = debug_mode
         self.connections_list = []
         self.threads = []
@@ -87,7 +89,7 @@ class MsgServerCore(ServerInterface):
                 client_id, version, code, payload_size, msg_size, msg_iv, msg_content = unpacked_msg_request
 
                 # Fetch and validate service AES key
-                aes_key = ram_template[MsgConsts.RAM_AES_KEY]
+                aes_key = ram_template[MsgConsts.RAM_KDC_AES_KEY]
                 Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY, value_to_validate=aes_key)
 
                 # Decrypt message and print to screen
@@ -106,6 +108,7 @@ class MsgServerCore(ServerInterface):
             raise CustomException(error_msg=f"Unable to handle client {sck.getpeername()}.", exception=e)    
 
     def setup_as_chat_room(self, service_ram_template: dict) -> None:
+        """Setups Msg Server as a Server that receives requests from Clients."""
         try:
             # Get DNS mapping from RAM
             self.ip_address = service_ram_template[MsgConsts.RAM_IP_ADDRESS]
@@ -115,14 +118,23 @@ class MsgServerCore(ServerInterface):
             self.setup_server(sck=self.service_socket)
 
             # Print welcome message
-            print(MsgConsts.MSG_SERVER_LOGO, end='\n\n')
-            print(f"{ProtoConsts.CONSOLE_ACK} Starting Server...")
-            print(f"{ProtoConsts.CONSOLE_ACK} Server is now listening on {self.ip_address}:{self.port}")
+            print(MsgConsts.WELCOME_MSG.format(MsgConsts.MSG_SERVER_LOGO, service_ram_template[MsgConsts.RAM_SERVICE_NAME]))
+
+            # For dev mode
+            if self.debug_mode:
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} Starting Server...",
+                                       color=Colors.GREEN))
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} Server is now listening on {self.ip_address}:{self.port}",
+                                       color=Colors.GREEN))
 
             # Wait for clients requests
             while True:
                 connection, address = self.service_socket.accept()
-                print(f"{ProtoConsts.CONSOLE_ACK} Connected to peer {connection.getpeername()}")
+
+                # For dev mode
+                if self.debug_mode:
+                    print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} Connected to peer {connection.getpeername()}",
+                                           color=Colors.GREEN))
 
                 # Handle Symmetric Key requests from clients
                 if self.symmetric_key_handler.handle_symmetric_key_request(sck=self.custom_socket,
@@ -131,13 +143,23 @@ class MsgServerCore(ServerInterface):
                                                                            encryptor=self.encryptor,
                                                                            protocol_handler=self.protocol_handler):
 
+                    # For dev mode
+                    if self.debug_mode:
+                        print(write_with_color(msg=f"Chat Room service template --> {service_ram_template}",
+                                               color=Colors.CYAN))
+
                     # Assign new thread to each connected client and enter chat mode
                     client_thread = Thread(target=self.handle_peer, args=(connection, service_ram_template))
                     client_thread.start()
                     self.threads.append(client_thread)
+
+                # Return general error
                 else:
-                    # TODO - return server error
-                    pass
+                    packet_no_payload[ProtoConsts.CODE] = ProtoConsts.RES_GENERAL_ERROR
+                    packed_general_error = self.protocol_handler.pack_request(code=ProtoConsts.RES_GENERAL_ERROR,
+                                                                              data=packet_no_payload,
+                                                                              formatter=server_response.copy())
+                    self.custom_socket.send_packet(sck=connection, packet=packed_general_error, logger=self.logger)
 
         except Exception as e:
             self.logger.logger.error(str(e))
@@ -150,33 +172,31 @@ class MsgServerCore(ServerInterface):
             raise CustomException(error_msg=f"Unable to run {self.__class__.__name__}.", exception=e)
 
     def run(self) -> None:
-
-        # TODO - update services_pool DB with message and ticket iv. check that aes key is the same as the ticket key
-        # TODO - if service id in services pool, already registered, fetch id like in client case
-        # TODO - if already registered and in services_pool start service
+        """Msg Server main run method."""
 
         # Create service RAM template and update its values
         service_ram_template = ram_service_template.copy()
         service_ram_template[MsgConsts.RAM_SERVICE_NAME] = self.service_name
         Validator.validate_injection(data_type=ValConsts.FMT_NAME, value_to_validate=self.service_name)
 
-        # Default service
-        if self.service_name == MsgConsts.DEF_SERVER_NAME:
+        # Registered Service
+        if self.is_registered:
 
             # Fetch data from file DB and update RAM DB
-            default_service_entry = fetch_entry_from_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_NAME,
-                                                             pivot_key=MsgConsts.RAM_SERVICE_NAME,
-                                                             pivot_value=self.service_name)
+            service_entry = fetch_entry_from_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_PATH,
+                                                     pivot_key=MsgConsts.RAM_SERVICE_NAME,
+                                                     pivot_value=self.service_name)
 
-            default_aes_key = default_service_entry[MsgConsts.RAM_AES_KEY_HEX]
-            default_server_id = default_service_entry[MsgConsts.RAM_SERVICE_ID_HEX]
-            if isinstance(default_aes_key, str):
-                default_service_entry[MsgConsts.RAM_AES_KEY] = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY,
-                                                                                            value_to_validate=default_aes_key)
-            if isinstance(default_server_id, str):
-                default_service_entry[MsgConsts.RAM_SERVICE_ID] = Validator.validate_injection(data_type=ValConsts.FMT_ID,
-                                                                                               value_to_validate=default_server_id)
-            service_ram_template.update(default_service_entry)
+            service_aes_key = service_entry[MsgConsts.RAM_SERVICE_AES_KEY_ENCODED]
+            service_ram_template[MsgConsts.RAM_SERVICE_AES_KEY_ENCODED] = service_aes_key
+            service_server_id = service_entry[MsgConsts.RAM_SERVICE_ID_HEX]
+            if isinstance(service_aes_key, str):
+                service_entry[MsgConsts.RAM_SERVICE_AES_KEY] = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY,
+                                                                                            value_to_validate=service_aes_key)
+            if isinstance(service_server_id, str):
+                service_entry[MsgConsts.RAM_SERVICE_ID] = Validator.validate_injection(data_type=ValConsts.FMT_ID,
+                                                                                       value_to_validate=service_server_id)
+            service_ram_template.update(service_entry)
 
             # For dev mode
             if self.debug_mode:
@@ -186,7 +206,7 @@ class MsgServerCore(ServerInterface):
             # Start default service
             self.setup_as_chat_room(service_ram_template=service_ram_template)
 
-        # Service Manager services
+        # Not a registered Service
         else:
             # Setup first as a client
             self.setup_as_client()

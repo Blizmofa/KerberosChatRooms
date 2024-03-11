@@ -2,7 +2,7 @@ from sys import exit as sys_exit
 from Utils.utils import is_exists, create_info_file, parse_info_file
 from Utils.validator import Validator, ValConsts
 from Utils.custom_arg_parser import CustomArgParser, Namespace
-from Protocol_Handler.protocol_utils import ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
 from Client.client_core import ClientCore
 from Client.client_constants import CConsts
 
@@ -26,17 +26,23 @@ def get_client_args() -> Namespace:
     client_parser.add_arg('-p', '--port', type=int, nargs='?', default=ProtoConsts.DEF_PORT_NUM,
                           help=client_parser.format_arg_help(general_description="For the KDC Port number.",
                                                              usage_example="python3 [path_to_client] -p/--port [port_number]"))
+    client_parser.add_arg('-un', '--username', type=str, nargs='?', default=None,
+                          help=client_parser.format_arg_help(general_description="For the Client username.",
+                                                             usage_example="python3 [path_to_client] -un/--username [username]"))
+    client_parser.add_arg('-pass', '--password', type=str, nargs='?', default=None,
+                          help=client_parser.format_arg_help(general_description="For the Client password.",
+                                                             usage_example="python3 [path_to_client] -pass/--password [password]"))
     return client_parser.parse_args()
 
 
 def main():
 
-    try:
-        # Validate srv.info file
-        if not is_exists(path_to_check=CConsts.AUTH_SERVER_FILE_NAME):
-            create_info_file(file_name=CConsts.AUTH_SERVER_FILE_NAME,
-                             file_data={ValConsts.FMT_IPV4_PORT: f"{ProtoConsts.LOCAL_HOST}:{ProtoConsts.DEF_PORT_NUM}"})
+    # Validate srv.info file
+    if not is_exists(path_to_check=CConsts.AUTH_SERVER_FILE_NAME):
+        create_info_file(file_name=CConsts.AUTH_SERVER_FILE_NAME,
+                         file_data={ValConsts.FMT_IPV4_PORT: f"{ProtoConsts.LOCAL_HOST}:{ProtoConsts.DEF_PORT_NUM}"})
 
+    try:
         # Fetch and validate KDC ip and port
         ip_port = parse_info_file(file_path=CConsts.AUTH_SERVER_FILE_NAME, target_line_number=1)
         ip_address, port = Validator.validate_injection(data_type=ValConsts.FMT_IPV4_PORT, value_to_validate=ip_port)
@@ -49,8 +55,10 @@ def main():
         # Create Client and connect to KDC
         client = ClientCore(connection_protocol=client_args.protocol,
                             server_ip=ip_address,
-                            server_port=port,
-                            debug_mode=client_args.debug_mode)
+                            server_port=int(port),
+                            debug_mode=client_args.debug_mode,
+                            username=client_args.username,
+                            password=client_args.password)
         client.run()
 
     except Exception as e:

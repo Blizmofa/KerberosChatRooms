@@ -236,9 +236,6 @@ class ProtocolHandler(ProtocolHandlerInterfaces):
                     if self.debug_mode:
                         print(write_with_color(msg=f"Deserialized --> {data[key]}", color=Colors.YELLOW))
 
-                else:
-                    raise ValueError(f"Unsupported mode '{mode}'.")
-
         return data
 
     def generate_packet_fmt(self, raw_packet: dict, protocol_template: Optional[dict] = communication_protocol_template,

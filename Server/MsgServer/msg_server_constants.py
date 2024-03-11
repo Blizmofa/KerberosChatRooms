@@ -5,25 +5,26 @@ class MsgConsts:
 
     DEF_IP_ADDRESS = '127.0.0.1'
     DEF_PORT_NUM = 1234
-    DEF_SERVER_NAME_FMT = "Printer "
+    DEF_SERVER_NAME_PREFIX = "Printer "
     DEF_SERVER_NAME = "Printer 1"
+    DEF_SLEEP_TIME = 5
+    DEF_INDENT_LVL = 2
+    MAX_NUM_OF_SERVICES = 10
     LINE_IP_PORT = 1
     LINE_NAME = 2
     LINE_ID = 3
     LINE_AES_KEY = 4
 
     # Files constants
-    PORT_FILE_NAME = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\port.info"
+    PORT_FILE_NAME = "port.info"
+    PORT_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{PORT_FILE_NAME}"
     MSG_FILE_NAME = "msg.info"
-    MSG_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{MSG_FILE_NAME}"
     SERVICE_POOL_FILE_NAME = "services_pool.json"
+    SERVICE_POOL_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{SERVICE_POOL_FILE_NAME}"
 
     # Service Manager
     CONNECTION_PROTOCOL = "connection_protocol"
-    AUTH_PORT = "auth_port"
-
-    # TODO - refactor to protocol constants
-    # TODO - create server_constants file instead of msg and auth constants
+    KDC_PORT = "kdc_port"
 
     # RAM Template constants
     FMT_ME = '{}'
@@ -32,8 +33,9 @@ class MsgConsts:
     RAM_SERVICE_ID_HEX = "server_id_hex"
     RAM_IS_REGISTERED = "is_registered"
     RAM_TICKET_IV = "ticket_iv"
-    RAM_AES_KEY = "aes_key"
-    RAM_AES_KEY_HEX = "aes_key_hex"
+    RAM_SERVICE_AES_KEY = "service_aes_key"
+    RAM_SERVICE_AES_KEY_ENCODED = "service_aes_key_encoded"
+    RAM_KDC_AES_KEY = "kdc_service_aes_key"
     RAM_MESSAGE_IV = "message_iv"
     RAM_PORT = "port"
     RAM_IP_ADDRESS = "ip_address"
@@ -60,8 +62,9 @@ ram_service_template = {
     MsgConsts.RAM_SERVICE_ID_HEX: MsgConsts.FMT_ME,
     MsgConsts.RAM_SERVICE_NAME: MsgConsts.FMT_ME,
     MsgConsts.RAM_TICKET_IV: MsgConsts.FMT_ME,
-    MsgConsts.RAM_AES_KEY: MsgConsts.FMT_ME,
-    MsgConsts.RAM_AES_KEY_HEX: MsgConsts.FMT_ME,
+    MsgConsts.RAM_SERVICE_AES_KEY: MsgConsts.FMT_ME,
+    MsgConsts.RAM_SERVICE_AES_KEY_ENCODED: MsgConsts.FMT_ME,
+    MsgConsts.RAM_KDC_AES_KEY: MsgConsts.FMT_ME,
     MsgConsts.RAM_MESSAGE_IV: MsgConsts.FMT_ME,
     MsgConsts.RAM_IS_REGISTERED: MsgConsts.FMT_ME
 }
@@ -70,12 +73,11 @@ ram_service_template = {
 service_manager_template = {
     MsgConsts.CONNECTION_PROTOCOL: MsgConsts.FMT_ME,
     MsgConsts.RAM_IP_ADDRESS: MsgConsts.FMT_ME,
-    MsgConsts.AUTH_PORT: MsgConsts.FMT_ME,
+    MsgConsts.KDC_PORT: MsgConsts.FMT_ME,
     MsgConsts.RAM_PORT: MsgConsts.FMT_ME,
     MsgConsts.RAM_SERVICE_ID_HEX: MsgConsts.FMT_ME,
     MsgConsts.RAM_SERVICE_NAME: MsgConsts.FMT_ME,
     MsgConsts.RAM_TICKET_IV: MsgConsts.FMT_ME,
-    MsgConsts.RAM_AES_KEY_HEX: MsgConsts.FMT_ME,
-    MsgConsts.RAM_MESSAGE_IV: MsgConsts.FMT_ME,
+    MsgConsts.RAM_SERVICE_AES_KEY_ENCODED: MsgConsts.FMT_ME,
     MsgConsts.RAM_IS_REGISTERED: MsgConsts.FMT_ME
 }

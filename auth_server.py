@@ -1,8 +1,8 @@
 from sys import exit as sys_exit
-from Utils import utils
+from Utils.utils import is_exists, create_info_file, parse_info_file
 from Utils.validator import Validator, ValConsts
 from Utils.custom_arg_parser import CustomArgParser, Namespace
-from Protocol_Handler.protocol_utils import ProtoConsts as ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts as ProtoConsts
 from Server.AuthServer.auth_server_constants import AuthConsts
 from Server.AuthServer.auth_server_core import AuthServerCore
 
@@ -35,13 +35,13 @@ def get_kdc_args() -> Namespace:
 def main():
 
     # Validate port.info file
-    if not utils.is_exists(AuthConsts.PORT_FILE_PATH):
-        utils.create_info_file(file_name=AuthConsts.PORT_FILE_PATH,
-                               file_data={ValConsts.FMT_PORT: ProtoConsts.DEF_PORT_NUM})
+    if not is_exists(AuthConsts.PORT_FILE_PATH):
+        create_info_file(file_name=AuthConsts.PORT_FILE_PATH,
+                         file_data={ValConsts.FMT_PORT: ProtoConsts.DEF_PORT_NUM})
 
     try:
         # Get port number from file
-        port_num = utils.parse_info_file(file_path=AuthConsts.PORT_FILE_PATH, target_line_number=1)
+        port_num = parse_info_file(file_path=AuthConsts.PORT_FILE_PATH, target_line_number=1)
 
     except ValueError:
         # Get default port number

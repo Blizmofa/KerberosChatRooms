@@ -125,7 +125,8 @@ packet_bytes_index = {
     ProtoConsts.RES_MSG_SERVERS_LIST: 3,
     ProtoConsts.REQ_AES_KEY: (4, 5),
     ProtoConsts.RES_ENCRYPTED_AES_KEY: (4, 5),
-    ProtoConsts.REQ_MSG_SERVER_AES_KEY: (4, 5)
+    ProtoConsts.REQ_MSG_SERVER_AES_KEY: (4, 5),
+    ProtoConsts.PKT_UNPACKED_SERVER: (0, 2)
 }
 
 # Template for adjusting unpack format

@@ -1,6 +1,7 @@
 from ipaddress import IPv4Address, AddressValueError
 from typing import Any, Optional, Union, Tuple
 from base64 import b64decode, b64encode
+from string import punctuation
 from Utils.logger import Logger, CustomFilter
 from Protocol_Handler.protocol_constants import ProtoConsts
 from Utils.custom_exception_handler import get_calling_method_name
@@ -13,6 +14,7 @@ class ValConsts:
 
     PORT_LOWER_BOUND = 0
     PORT_UPPER_BOUND = 65535
+    TCP_UDP_LENGTH = 3
 
     # For supported validation formats
     FMT_IPV4_PORT = "ipv4:port"
@@ -29,6 +31,7 @@ class ValConsts:
     FMT_VERSION = "version"
     FMT_CREATION_TIME = "creation_time"
     FMT_EXPIRATION_TIME = "expiration_time"
+    FMT_CONNECTION_PROTOCOL = "connection_protocol"
 
 
 # Validator default config template
@@ -44,7 +47,7 @@ validator_config_template = {
                        ValConsts.MAX_LENGTH: ProtoConsts.SIZE_ENC_CLIENT_ID},
     ValConsts.FMT_AES_KEY: {ValConsts.TYPE: (bytes, str),
                             ValConsts.MIN_LENGTH: ProtoConsts.SIZE_AES_KEY,
-                            ValConsts.MAX_LENGTH: ProtoConsts.SIZE_ENC_AES_KEY},
+                            ValConsts.MAX_LENGTH: ProtoConsts.SIZE_ENCODED_AES_KEY},
     ValConsts.FMT_IPV4: {ValConsts.TYPE: str,
                          ValConsts.MIN_LENGTH: ProtoConsts.SIZE_IPV4_MIN,
                          ValConsts.MAX_LENGTH: ProtoConsts.SIZE_IPV4_MAX},
@@ -59,8 +62,10 @@ validator_config_template = {
     ValConsts.FMT_TICKET: {ValConsts.TYPE: (str, bytes)},
     ValConsts.FMT_VERSION: {ValConsts.TYPE: int},
     ValConsts.FMT_CREATION_TIME: {ValConsts.TYPE: str},
-    ValConsts.FMT_EXPIRATION_TIME: {ValConsts.TYPE: str}
-
+    ValConsts.FMT_EXPIRATION_TIME: {ValConsts.TYPE: str},
+    ValConsts.FMT_CONNECTION_PROTOCOL: {ValConsts.TYPE: str,
+                                        ValConsts.MIN_LENGTH: ValConsts.TCP_UDP_LENGTH,
+                                        ValConsts.MAX_LENGTH: ValConsts.TCP_UDP_LENGTH}
 }
 
 
@@ -132,6 +137,11 @@ class Validator:
             raise ValidatorError(f"Unsupported value type '{type(value)}' for {value}, "
                                  f"should be of type {bytes} or {str}.")
 
+    @staticmethod
+    def __validate_tcp_or_udp(connection_protocol: str) -> bool:
+        """Checks if a given string represents TCP or UDP."""
+        return connection_protocol.lower() in (ProtoConsts.PROTO_TCP.lower(), ProtoConsts.PROTO_UDP.lower())
+
     def __validate_ip_and_port(self, ip_and_port: str) -> Tuple[str, int]:
         """Returns the validated and parsed IPv4:Port format."""
         try:
@@ -190,6 +200,8 @@ class Validator:
                         return self.__validate_bytes_or_hex(value=value_to_validate)
                     if data_type == ValConsts.FMT_TICKET or data_type == ValConsts.FMT_AES_KEY:
                         return self.__validate_bytes_or_base64(value=value_to_validate)
+                    if data_type == ValConsts.FMT_CONNECTION_PROTOCOL:
+                        return self.__validate_tcp_or_udp(connection_protocol=value_to_validate)
 
                 except Exception as e:
                     raise ValidatorError(f"Unable to validate '{data_type}': {value_to_validate}, Error: {str(e)}")

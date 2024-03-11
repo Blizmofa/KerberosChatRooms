@@ -2,16 +2,17 @@ from Socket.custom_socket import socket, Thread
 from Utils import utils
 from Utils.logger import Logger, CustomFilter
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
-from Utils.validator import Validator, ValConsts as ValConsts
-from Server.server_interface import ServerInterface
-from Server.AuthServer.auth_server_constants import ram_clients_template, ram_servers_template, AuthConsts as AuthConsts
-from Server.AuthServer.auth_server_logic import AuthServerLogic
+from Utils.validator import Validator, ValConsts
 from Protocol_Handler.protocol_handler import ProtocolHandler
-from Protocol_Handler.protocol_utils import server_request, server_response, ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import server_request
+from Server.server_interface import ServerInterface
+from Server.AuthServer.auth_server_constants import ram_clients_template, ram_servers_template, AuthConsts
+from Server.AuthServer.auth_server_logic import AuthServerLogic
 
 
 class AuthServerCore(ServerInterface):
-    """Handles the Authentication Server core functionalities."""
+    """Handles the Auth Server core functionalities."""
 
     def __init__(self, connection_protocol: str, ip_address: str, port: int, debug_mode: bool) -> None:
         super().__init__(connection_protocol, ip_address, port, debug_mode)
@@ -121,8 +122,7 @@ class AuthServerCore(ServerInterface):
                                                                        request_code=request_code,
                                                                        unpacked_packet=unpacked,
                                                                        client_ram_template=ram_template,
-                                                                       server_ram_template=server_ram_template,
-                                                                       server_response=server_response.copy())
+                                                                       server_ram_template=server_ram_template)
                     # For dev mode
                     if self.debug_mode:
                         print(utils.write_with_color(msg=f"Registered client template --> {ram_template}",
@@ -135,8 +135,7 @@ class AuthServerCore(ServerInterface):
                     self.auth_server_logic.handle_aes_key_request(server_socket=self.custom_socket,
                                                                   client_socket=sck,
                                                                   unpacked_packet=unpacked,
-                                                                  client_ram_template=ram_template,
-                                                                  server_response=server_response.copy())
+                                                                  client_ram_template=ram_template)
 
                     # For dev mode
                     if self.debug_mode:
@@ -148,13 +147,11 @@ class AuthServerCore(ServerInterface):
 
                     self.auth_server_logic.handle_services_list_request(server_socket=self.custom_socket,
                                                                         client_socket=sck,
-                                                                        client_ram_template=ram_template,
-                                                                        server_response=server_response.copy())
+                                                                        client_ram_template=ram_template)
                 # Send general server error in any other case
                 else:
                     self.auth_server_logic.send_server_general_error(server_socket=self.custom_socket,
-                                                                     client_socket=sck,
-                                                                     server_response=server_response.copy())
+                                                                     client_socket=sck)
                     self.cleanup(sck=sck, connections_list=self.connections_list, active_connections=self.active_connections)
                     raise ValueError(f"Unsupported request code {request_code}.")
 

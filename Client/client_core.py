@@ -5,7 +5,7 @@ from Utils.logger import Logger, CustomFilter
 from Utils.encryptor import Encryptor
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Socket.custom_socket import CustomSocket, Thread
-from Protocol_Handler.protocol_utils import ProtoConsts as ProtoConsts, server_request, server_response
+from Protocol_Handler.protocol_constants import ProtoConsts as ProtoConsts
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Client.client_input import ClientInput
 from Client.client_constants import CConsts as CConsts, client_ram_template, me_info_default_data
@@ -17,11 +17,14 @@ from Client.client_key_ticket_handler import KeyTicketHandler
 class ClientCore(CustomSocket):
     """Handles the Client core functionalities."""
 
-    def __init__(self, connection_protocol: str, server_ip: str, server_port: int, debug_mode: bool) -> None:
+    def __init__(self, connection_protocol: str, server_ip: str, server_port: int,
+                 debug_mode: bool, username: str, password: str) -> None:
         super().__init__(connection_protocol=connection_protocol, debug_mode=debug_mode)
         self.server_ip = server_ip
         self.server_port = server_port
         self.debug_mode = debug_mode
+        self.username = username
+        self.password = password
         self.msg_servers_list = []
         self.client_socket = self.create_socket()
         self.logger = Logger(logger_name=self.__class__.__name__, debug_mode=debug_mode)
@@ -38,8 +41,6 @@ class ClientCore(CustomSocket):
                 self.registration_handler.handle_registration_request(sck=self,
                                                                       client_socket=self.client_socket,
                                                                       ram_template=ram_template,
-                                                                      server_request_formatter=server_request.copy(),
-                                                                      server_response_formatter=server_response.copy(),
                                                                       protocol_handler=self.protocol_handler)
                 # For dev mode
                 if self.debug_mode:
@@ -58,13 +59,11 @@ class ClientCore(CustomSocket):
                 self.services_handler.handle_services_list_request(sck=self,
                                                                    client_socket=self.client_socket,
                                                                    ram_template=ram_template,
-                                                                   server_request_formatter=server_request.copy(),
-                                                                   server_response_formatter=server_response.copy(),
                                                                    msg_servers_list=self.msg_servers_list,
                                                                    protocol_handler=self.protocol_handler)
 
                 print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} Services list has received successfully, "
-                                                 f"and been parse to '{CConsts.SERVICES_FILE_NAME}'",
+                                                 f"and been parse to '{CConsts.SERVICES_FILE_PATH}'",
                                              color=utils.Colors.GREEN))
             else:
                 print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} Please register first.",
@@ -80,8 +79,6 @@ class ClientCore(CustomSocket):
                 self.key_ticket_handler.handle_aes_key_request(sck=self,
                                                                client_socket=self.client_socket,
                                                                ram_template=ram_template,
-                                                               server_request_formatter=server_request.copy(),
-                                                               server_response_formatter=server_response.copy(),
                                                                msg_servers_list=self.msg_servers_list,
                                                                encryptor=self.encryptor,
                                                                protocol_handler=self.protocol_handler)
@@ -122,18 +119,16 @@ class ClientCore(CustomSocket):
                 # Handle AES Key request and connect to Service
                 elif client_input == CConsts.IN_REQ_AES_KEY_CONNECT:
                     self.__get_service_aes_key(is_registered=is_registered, ram_template=ram_template)
-                    # TODO - cleanup socket to auth server
-                    # TODO - break only if connected successfully
-                    # break
 
                 # Shut down client
                 elif client_input == CConsts.IN_QUIT:
-                    # TODO - call cleanup
                     print(utils.write_with_color(msg=f"Shutting down client.", color=utils.Colors.RED))
+                    self.client_socket.close()
                     sys_exit(ProtoConsts.STATUS_NO_ERROR_CODE)
 
                 else:
-                    print(f"{ProtoConsts.CONSOLE_FAIL} Invalid option, please choose another: ")
+                    print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_FAIL} Invalid option, please choose another ",
+                                                 color=utils.Colors.RED))
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to start {self.__class__.__name__}.", exception=e)
@@ -154,20 +149,26 @@ class ClientCore(CustomSocket):
             # Create client RAM template, parse data from file DB or get it from user
             ram_template = client_ram_template.copy()
 
-            if utils.is_exists(CConsts.CLIENT_FILE_PATH):
-                username = utils.parse_info_file(file_path=CConsts.CLIENT_FILE_PATH, target_line_number=CConsts.CLIENT_NAME_LINE)
+            # get client username and id
+            client_id = None
+            if self.username:
+                pass
+            elif utils.is_exists(CConsts.CLIENT_FILE_PATH) and self.username is None:
+                self.username = utils.parse_info_file(file_path=CConsts.CLIENT_FILE_PATH, target_line_number=CConsts.CLIENT_NAME_LINE)
                 client_id = utils.parse_info_file(file_path=CConsts.CLIENT_FILE_PATH, target_line_number=CConsts.CLIENT_ID_LINE)
-
             else:
-                username = input("Please enter your username: ")
-                client_id = None
+                self.username = ClientInput.get_client_input(suffix="username")
 
-            ram_template[CConsts.RAM_USERNAME] = username
+            # Get client password
+            # if self.password is None:
+            #     self.password = ClientInput.get_client_password()
+
+            # Update RAM template
+            ram_template[CConsts.RAM_USERNAME] = self.username
             ram_template[CConsts.RAM_CLIENT_ID] = client_id
-            password = "qwer1234"
-            # password = input("Please enter your password: ")
-            ram_template[CConsts.RAM_PASSWORD] = password
-            ram_template[CConsts.RAM_PASSWORD_HASH] = self.encryptor.hash_password(password=password)
+            self.password = "qwer1234"
+            ram_template[CConsts.RAM_PASSWORD] = self.password
+            ram_template[CConsts.RAM_PASSWORD_HASH] = self.encryptor.hash_password(value=self.password)
 
             # Already registered
             # TODO - fix bug when in server not registered but in client registered
@@ -187,6 +188,3 @@ class ClientCore(CustomSocket):
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to run {self.__class__.__name__}.", exception=e)
-
-
-# TODO - cleanup, close socket to auth server and open to msg server

@@ -6,13 +6,12 @@ class CConsts:
 
     SERVER_GENERAL_ERROR = "server responded with an error"
 
-    # Client files constants
+    # Files constants
     CLIENT_FILE_NAME = "me.info"
     CLIENT_FILE_PATH = f"{os_path.abspath(CLIENT_FILE_NAME)}"
-    # TODO - create srv.info with auth server ip:port only
     AUTH_SERVER_FILE_NAME = "srv.info"
-    # TODO - move services_file to client directory
     SERVICES_FILE_NAME = "services_info.json"
+    SERVICES_FILE_PATH = f"{os_path.join(os_path.dirname(os_path.abspath(__file__)))}\{SERVICES_FILE_NAME}"
     CLIENT_IP_PORT_LINE = 1
     CLIENT_NAME_LINE = 1
     CLIENT_ID_LINE = 2

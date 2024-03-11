@@ -31,7 +31,7 @@ class AuthConsts:
     RAM_LAST_SEEN = "last_seen"
     RAM_IS_REGISTERED = "is_registered"
     RAM_AES_KEY = "aes_key"
-    RAM_AES_KEY_HEX = "aes_key_hex"
+    RAM_AES_KEY_ENCODED = "aes_key_encoded"
     RAM_SERVER_IP = "server_ip"
     RAM_SERVER_PORT = "server_port"
 
@@ -110,7 +110,7 @@ ram_servers_template = {
     AuthConsts.RAM_SERVER_ID_HEX: AuthConsts.FMT_ME,
     AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
     AuthConsts.RAM_AES_KEY: AuthConsts.FMT_ME,
-    AuthConsts.RAM_AES_KEY_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_AES_KEY_ENCODED: AuthConsts.FMT_ME,
     AuthConsts.RAM_SERVER_IP: AuthConsts.FMT_ME,
     AuthConsts.RAM_SERVER_PORT: AuthConsts.FMT_ME,
     AuthConsts.RAM_IS_REGISTERED: AuthConsts.FMT_ME
@@ -128,7 +128,7 @@ file_db_clients_template = {
 file_db_servers_template = {
     AuthConsts.RAM_SERVER_ID_HEX: AuthConsts.FMT_ME,
     AuthConsts.RAM_CLIENT_NAME: AuthConsts.FMT_ME,
-    AuthConsts.RAM_AES_KEY_HEX: AuthConsts.FMT_ME,
+    AuthConsts.RAM_AES_KEY_ENCODED: AuthConsts.FMT_ME,
     AuthConsts.RAM_SERVER_IP: AuthConsts.FMT_ME,
     AuthConsts.RAM_SERVER_PORT: AuthConsts.FMT_ME
 }

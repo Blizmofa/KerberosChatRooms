@@ -4,7 +4,8 @@ from Utils.validator import Validator, ValConsts
 from Utils.encryptor import Encryptor
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Socket.custom_socket import CustomSocket, socket
-from Protocol_Handler.protocol_utils import ProtoConsts, server_request, server_response
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import server_request, server_response
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Server.MsgServer.msg_server_constants import MsgConsts
 
@@ -44,7 +45,7 @@ class RegistrationHandler:
                                        color=Colors.GREEN))
 
                 # Update services JSON db
-                insert_data_to_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_NAME,
+                insert_data_to_json_db(file_path=MsgConsts.SERVICE_POOL_FILE_PATH,
                                        data=ram_template,
                                        pivot_key=MsgConsts.RAM_SERVICE_NAME,
                                        pivot_value=service_name)
@@ -69,10 +70,9 @@ class RegistrationHandler:
             # Create service AES key and update RAM DB
             msg_server_aes_key = encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
             Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY, value_to_validate=msg_server_aes_key)
-            # TODO - if aes key validate error, raise exception or something, catch validator exception and exit
-            ram_template[MsgConsts.RAM_AES_KEY] = msg_server_aes_key
-            ram_template[MsgConsts.RAM_AES_KEY_HEX] = msg_server_aes_key.hex()
-
+            ram_template[MsgConsts.RAM_SERVICE_AES_KEY] = msg_server_aes_key
+            ram_template[MsgConsts.RAM_SERVICE_AES_KEY_ENCODED] = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY,
+                                                                                               value_to_validate=msg_server_aes_key)
             # Create packet data frame
             data = {
                 ProtoConsts.CLIENT_ID: None,

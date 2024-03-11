@@ -3,7 +3,8 @@ from Utils.logger import Logger, CustomFilter
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Utils.validator import Validator, ValConsts
 from Socket.custom_socket import CustomSocket, socket
-from Protocol_Handler.protocol_utils import ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import server_request, server_response
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Client.client_constants import CConsts
 
@@ -16,7 +17,7 @@ class RegistrationHandler:
         self.logger = Logger(logger_name=self.__class__.__name__, debug_mode=debug_mode)
 
     def __process_register_response(self, response_code: int, data: dict, ram_template: dict) -> None:
-        """Processes the AS register response and update RAM template accordingly."""
+        """Processes the AS registration response and update RAM template accordingly."""
         try:
             CustomFilter.filter_name = get_calling_method_name()
 
@@ -35,7 +36,6 @@ class RegistrationHandler:
                                             file_path=CConsts.CLIENT_FILE_NAME,
                                             max_lines=CConsts.CLIENT_FILE_MAX_LINES)
                 # Log
-
                 msg = "Registration successful."
                 self.logger.logger.info(msg=msg)
                 print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ACK} {msg}",
@@ -54,7 +54,6 @@ class RegistrationHandler:
             raise CustomException(error_msg=f"Unable to process register response.", exception=e)
 
     def handle_registration_request(self, sck: CustomSocket, client_socket: socket, ram_template: dict,
-                                    server_request_formatter: dict, server_response_formatter: dict,
                                     protocol_handler: ProtocolHandler) -> None:
         """Sends registration request to the AS."""
         try:
@@ -81,13 +80,13 @@ class RegistrationHandler:
             # Pack request
             packed_register_request = protocol_handler.pack_request(code=ProtoConsts.REQ_CLIENT_REG,
                                                                     data=data,
-                                                                    formatter=server_request_formatter)
+                                                                    formatter=server_request.copy())
             # Send request and receive response
             register_response = sck.send_recv_packet(sck=client_socket, packet=packed_register_request,
                                                      logger=self.logger, response=True)
             # Unpack and deserialize packet data
             response_code, unpacked_register_response = protocol_handler.unpack_request(received_packet=register_response,
-                                                                                        formatter=server_response_formatter,
+                                                                                        formatter=server_response.copy(),
                                                                                         deserialize=True)
             # For dev mode
             if self.debug_mode:

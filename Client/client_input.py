@@ -5,7 +5,7 @@ class ClientInput:
     """Auxiliary Class that Handles all client input logic."""
 
     @staticmethod
-    def show_client_menu() -> int:
+    def show_client_menu():
         # with self.lock:
         print(f"{'#'}" * 40)
         print(f"# Available client options: ")
@@ -17,7 +17,10 @@ class ClientInput:
         print(f"{'#'}" * 40)
 
         # Get client input
-        return int(input(f"Please enter your choice: "))
+        client_input = input(f"Please enter your choice: ")
+        if not client_input:
+            return None
+        return int(client_input)
 
     @staticmethod
     def get_service_name(services_list: list) -> dict:
@@ -40,6 +43,6 @@ class ClientInput:
             return next(obj for obj in services_list if obj.get(CConsts.RAM_SERVER_NAME) == selected_name)
 
     @staticmethod
-    def get_client_msg():
-        # TODO - validate length and black list values
-        return input(f"Enter your message: ")
+    def get_client_input(suffix: str) -> str:
+        return input(f"Enter your {suffix}: ")
+

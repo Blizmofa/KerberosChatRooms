@@ -61,10 +61,6 @@ class KeyTicketHandler:
             # Get client password hash
             password_hash = client_ram_template[AuthConsts.RAM_PASSWORD_HASH]
 
-            # Fetch the selected service AES key
-            # client_aes_key = encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_AES_KEY)
-            # client_aes_key = service_object[AuthConsts.RAM_AES_KEY]
-
             # Encrypt packet content
             encrypted_key_iv = encryptor.generate_bytes_stream(size=ProtoConsts.SIZE_IV)
             encrypted_aes_key = encryptor.encrypt(value=kdc_aes_key,

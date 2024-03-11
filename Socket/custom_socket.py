@@ -1,7 +1,8 @@
 from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM, SocketKind, error as socket_error
 from threading import Thread
+from select import select
 from typing import Optional
-from Protocol_Handler.protocol_utils import ProtocolConstants
+from Protocol_Handler.protocol_constants import ProtoConsts as ProtoConsts
 from Utils.custom_exception_handler import CustomException
 from Utils.logger import Logger
 from Utils.utils import write_with_color, Colors
@@ -17,9 +18,9 @@ class CustomSocket(Thread):
 
     def set_socket_protocol(self) -> SocketKind:
         """Sets transport protocol to TCP or UDP."""
-        if self.connection_protocol == ProtocolConstants.PROTO_TCP:
+        if self.connection_protocol.lower() == ProtoConsts.PROTO_TCP:
             return SOCK_STREAM
-        elif self.connection_protocol == ProtocolConstants.PROTO_UDP:
+        elif self.connection_protocol.lower() == ProtoConsts.PROTO_UDP:
             return SOCK_DGRAM
         else:
             raise ValueError(f"Unsupported connection protocol '{self.connection_protocol}'.")
@@ -39,6 +40,34 @@ class CustomSocket(Thread):
 
         except socket_error as e:
             raise CustomException(error_msg=f"Unable to create socket.", exception=e)
+
+    def connect(self, sck: socket, ip_address: str, port: int) -> None:
+        """Setups the Msg Server as a client in order to register to Authentication server."""
+        try:
+            sck.connect((ip_address, port))
+
+            # For dev mode
+            if self.debug_mode:
+                print(write_with_color(msg=f"Connected to {ip_address}:{port}",
+                                       color=Colors.GREEN))
+
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to connect to {ip_address}:{port}", exception=e)
+
+    def monitor_connection(self, sck: socket) -> bool:
+        """Returns True if the given socket is open, False otherwise."""
+        try:
+            # Use select to check if the socket is readable
+            _, writeable, _ = select([], [sck], [], 0)
+            return bool(writeable)
+
+        # Socket is closed
+        except socket_error:
+            # For dev mode
+            if self.debug_mode:
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} Socket {sck.getpeername()} is closed.",
+                                       color=Colors.RED))
+            return False
 
     def receive_packet(self, sck: socket, receive_buffer: Optional[int] = 1024, logger: Optional[Logger] = None) -> bytes:
         """Main receive method, return a raw packet for unpacking purposes."""
@@ -79,7 +108,7 @@ class CustomSocket(Thread):
         except Exception as e:
             raise CustomException(error_msg=f"Unable to send packet to {sck.getpeername()}.", exception=e)
 
-    def custom_send_recv(self, sck: socket, packet: bytes, buffer_size: Optional[int] = 1024,
+    def send_recv_packet(self, sck: socket, packet: bytes, buffer_size: Optional[int] = 1024,
                          logger: Optional[Logger] = None, response: Optional[bool] = False) -> bytes:
         """Sends and Receives using class send and receive main methods."""
         try:
@@ -90,4 +119,3 @@ class CustomSocket(Thread):
 
         except Exception as e:
             raise CustomException(error_msg=f"Send-Recv Error.", exception=e)
-

@@ -2,8 +2,8 @@ from sys import exit as sys_exit
 from Utils.utils import is_exists, create_info_file, parse_info_file
 from Utils.validator import Validator, ValConsts
 from Utils.custom_arg_parser import CustomArgParser, Namespace
-from Protocol_Handler.protocol_utils import ProtoConsts as ProtoConsts
-from Server.service_manager import ServiceManager
+from Protocol_Handler.protocol_constants import ProtoConsts as ProtoConsts
+from Server.MsgServer.service_manager import ServiceManager
 from Server.MsgServer.msg_server_constants import MsgConsts
 
 
@@ -54,17 +54,16 @@ def main():
         if msg_server_args.port:
             port = msg_server_args.port
 
-        # Create Service Manager and services pool
-        manager = ServiceManager(debug_mode=msg_server_args.debug_mode)
-        manager.create_service_pool(num_of_services=msg_server_args.number_of_services,
-                                    connection_protocol=msg_server_args.protocol,
-                                    auth_server_ip_address=msg_server_args.ip_address,
-                                    auth_server_port=int(port),
-                                    service_name_prefix=msg_server_args.service_name_prefix)
-        manager.run()
+        # Create and run the Service Manager
+        manager = ServiceManager(connection_protocol=msg_server_args.protocol,
+                                 kdc_ip_address=msg_server_args.ip_address,
+                                 kdc_port=int(port),
+                                 service_name_prefix=msg_server_args.service_name_prefix,
+                                 debug_mode=msg_server_args.debug_mode)
+        manager.run(num_of_services=msg_server_args.number_of_services)
 
     except Exception as e:
-        print(e)
+        print(str(e))
         sys_exit(ProtoConsts.STATUS_ERROR_CODE)
 
 

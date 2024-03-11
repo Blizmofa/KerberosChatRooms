@@ -5,7 +5,8 @@ from Utils.validator import Validator, ValConsts
 from Utils.encryptor import Encryptor
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Socket.custom_socket import CustomSocket, socket
-from Protocol_Handler.protocol_utils import ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import server_request, server_response
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Client.client_input import ClientInput
 from Client.client_constants import CConsts
@@ -45,7 +46,6 @@ class KeyTicketHandler:
             raise CustomException(error_msg=f"Unable to get client wanted service.", exception=e)
 
     def handle_aes_key_request(self, sck: CustomSocket, client_socket: socket, ram_template: dict,
-                               server_request_formatter: dict, server_response_formatter: dict,
                                msg_servers_list: list, encryptor: Encryptor, protocol_handler: ProtocolHandler) -> None:
         """Sends AES key request to the TGS."""
         try:
@@ -82,13 +82,13 @@ class KeyTicketHandler:
             # Pack request
             packed_aes_request = protocol_handler.pack_request(code=ProtoConsts.REQ_AES_KEY,
                                                                data=data,
-                                                               formatter=server_request_formatter.copy())
+                                                               formatter=server_request.copy())
             # Send request and receive response
             encrypted_key_response = sck.send_recv_packet(sck=client_socket, packet=packed_aes_request,
                                                           logger=self.logger, response=True)
             # Unpack and deserialize packet data
             response_code, unpacked_aes_key_response = protocol_handler.unpack_request(received_packet=encrypted_key_response,
-                                                                                       formatter=server_response_formatter.copy(),
+                                                                                       formatter=server_response.copy(),
                                                                                        code=ProtoConsts.RES_ENCRYPTED_AES_KEY,
                                                                                        deserialize=True)
             # For dev mode
@@ -107,8 +107,6 @@ class KeyTicketHandler:
                                                       ram_template=ram_template,
                                                       server_id=server_id,
                                                       unpacked_aes_key_response=unpacked_aes_key_response,
-                                                      server_request_formatter=server_request_formatter,
-                                                      server_response_formatter=server_response_formatter,
                                                       encryptor=encryptor,
                                                       protocol_handler=protocol_handler)
 

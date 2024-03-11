@@ -14,10 +14,10 @@ class TestEncryptor(TestCase):
         self.assertEqual(len(bytes_stream), 32)
 
     def test_hash_password(self) -> None:
-        str_hashed_password = Encryptor.hash_password(password="qwer1234")
+        str_hashed_password = Encryptor.hash_password(value="qwer1234")
         self.assertEqual(type(str_hashed_password), bytes)
         self.assertEqual(len(str_hashed_password), 32)
-        bytes_hashed_password = Encryptor.hash_password(password=b'qwer1234')
+        bytes_hashed_password = Encryptor.hash_password(value=b'qwer1234')
         self.assertEqual(type(bytes_hashed_password), bytes)
 
 

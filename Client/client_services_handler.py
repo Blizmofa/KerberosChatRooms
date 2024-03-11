@@ -1,11 +1,14 @@
+import sys
 from struct import calcsize, unpack
 from Utils.logger import Logger, CustomFilter
 from Utils.utils import insert_data_to_template, create_json_file, write_with_color, Colors
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Utils.validator import Validator, ValConsts
 from Socket.custom_socket import CustomSocket, socket
-from Protocol_Handler.protocol_utils import code_to_payload_template, ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import code_to_payload_template, server_request, server_response
 from Protocol_Handler.protocol_handler import ProtocolHandler
+from Protocol_Handler.protocol_utils import insert_unpacked_packet_content, deserialize_packet, get_bytes_value_index
 from Client.client_constants import file_db_servers_template, CConsts
 
 
@@ -32,14 +35,14 @@ class ServicesHandler:
                 msg_servers_list[index] = file_db
 
             # Insert updated services to file DB
-            create_json_file(file_path=CConsts.SERVICES_FILE_NAME, data=msg_servers_list)
+            create_json_file(file_path=CConsts.SERVICES_FILE_PATH, data=msg_servers_list)
 
             # Log
             CustomFilter.filter_name = get_calling_method_name()
-            self.logger.logger.debug(f"Inserted parsed services list to '{CConsts.SERVICES_FILE_NAME}' successfully.")
+            self.logger.logger.debug(f"Inserted parsed services list to '{CConsts.SERVICES_FILE_PATH}' successfully.")
 
         except Exception as e:
-            raise CustomException(error_msg=f"Unable to insert services list into file DB {CConsts.SERVICES_FILE_NAME}.",
+            raise CustomException(error_msg=f"Unable to insert services list into file DB {CConsts.SERVICES_FILE_PATH}.",
                                   exception=e)
 
     def __parse_services_list_data(self, unpacked_data: bytes, msg_servers_list: list, protocol_handler: ProtocolHandler) -> None:
@@ -56,20 +59,19 @@ class ServicesHandler:
                 unpacked_server = unpack(packed_server_fmt, server)
 
                 # Deserialize server raw data
-                # TODO - index to pass to a consts in ProtoConsts, move to protocol handler method
-                raw_data = protocol_handler.deserialize_packet(packet=unpacked_server, index_to_pass=(0, 2))
+                raw_data = deserialize_packet(packet=unpacked_server,
+                                              index_to_pass=get_bytes_value_index(code=ProtoConsts.PKT_UNPACKED_SERVER))
                 server_data = protocol_handler.build_packet_format(code=ProtoConsts.RES_MSG_SERVERS_LIST,
                                                                    formatter=server_data_formatter.copy())
 
-                server_data.update(protocol_handler.insert_unpacked_packet_content(data_format=server_data,
-                                                                                   unpacked_packet=raw_data))
+                server_data.update(insert_unpacked_packet_content(data_format=server_data,
+                                                                  unpacked_packet=raw_data))
 
-                server_data.update(protocol_handler.serialize_packet_value(formatter=server_data_formatter,
-                                                                           data=server_data,
-                                                                           mode=ProtoConsts.DESERIALIZE))
+                server_data.update(protocol_handler.deserialize_serialize_ipv4(formatter=server_data_formatter,
+                                                                               data=server_data,
+                                                                               mode=ProtoConsts.DESERIALIZE))
                 msg_servers_list.append(server_data)
 
-            # TODO - if the same service already in list, dont append
             # Insert servers to file DB
             self.__insert_services_list_to_file_db(msg_servers_list=msg_servers_list)
 
@@ -86,7 +88,6 @@ class ServicesHandler:
             raise CustomException(error_msg=f"Unable to parse servers list.", exception=e)
 
     def handle_services_list_request(self, sck: CustomSocket, client_socket: socket, ram_template: dict,
-                                     server_request_formatter: dict, server_response_formatter: dict,
                                      msg_servers_list: list, protocol_handler: ProtocolHandler) -> None:
         """Sends the services list request to the AS."""
         try:
@@ -104,19 +105,23 @@ class ServicesHandler:
             # Pack request
             packed_services_list_request = protocol_handler.pack_request(code=ProtoConsts.REQ_MSG_SERVERS_LIST,
                                                                          data=data,
-                                                                         formatter=server_request_formatter)
-            # TODO - move buffer size to constants
+                                                                         formatter=server_request.copy())
             # Send request and receive response
             servers_list_response = sck.send_recv_packet(sck=client_socket, packet=packed_services_list_request,
-                                                         buffer_size=4096, logger=self.logger, response=True)
+                                                         buffer_size=ProtoConsts.SERVER_LIST_BUFFER_SIZE,
+                                                         logger=self.logger,
+                                                         response=True)
             # Unpack and deserialize packet data
             response_code, unpacked_servers_list_response = protocol_handler.unpack_request(received_packet=servers_list_response,
-                                                                                            formatter=server_response_formatter,
+                                                                                            formatter=server_response.copy(),
                                                                                             deserialize=True)
-            # In case there aren't any msg servers registered, also not the default one
+            # In case there aren't any services registered, also not the default one
             if response_code == ProtoConsts.RES_GENERAL_ERROR:
-                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} {CConsts.SERVER_GENERAL_ERROR}",
+                print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} Chat rooms is not available at this time.",
                                        color=Colors.RED))
+                client_socket.close()
+                sys.exit(ProtoConsts.STATUS_ERROR_CODE)
+
             # Log
             CustomFilter.filter_name = get_calling_method_name()
             msg = f"Received Response --> Code: {response_code}, Data: {unpacked_servers_list_response}"

@@ -5,7 +5,8 @@ from Utils.validator import Validator, ValConsts
 from Utils.encryptor import Encryptor
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Socket.custom_socket import CustomSocket, socket
-from Protocol_Handler.protocol_utils import code_to_payload_template, ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
+from Protocol_Handler.protocol_templates import  server_request, server_response, code_to_payload_template
 from Protocol_Handler.protocol_handler import ProtocolHandler
 from Client.client_constants import CConsts
 from Client.client_input import ClientInput
@@ -31,7 +32,7 @@ class ChatRoomHandler:
             # Fetch service object
             if not isinstance(service_id, str):
                 service_id = Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=service_id)
-            service_object = utils.fetch_entry_from_json_db(file_path=CConsts.SERVICES_FILE_NAME,
+            service_object = utils.fetch_entry_from_json_db(file_path=CConsts.SERVICES_FILE_PATH,
                                                             pivot_key=CConsts.RAM_SERVER_ID,
                                                             pivot_value=service_id)
             # Serialize packet data and insert into file DBs
@@ -44,7 +45,7 @@ class ChatRoomHandler:
             service_object[CConsts.RAM_ENCRYPTED_KEY_IV] = Validator.validate_injection(data_type=ValConsts.FMT_IV,
                                                                                         value_to_validate=encrypted_key_iv)
 
-            utils.insert_data_to_json_db(file_path=CConsts.SERVICES_FILE_NAME, data=service_object,
+            utils.insert_data_to_json_db(file_path=CConsts.SERVICES_FILE_PATH, data=service_object,
                                          pivot_key=CConsts.RAM_SERVER_ID, pivot_value=service_id)
 
             # Log
@@ -73,15 +74,14 @@ class ChatRoomHandler:
 
             # Decrypt AES key and nonce
             password_hash = ram_template[CConsts.RAM_PASSWORD_HASH]
-            decrypted_key = encryptor.decrypt(encrypted_value=encrypted_aes_key,
-                                              decryption_key=password_hash,
-                                              iv=encrypted_key_iv)
-
+            decrypted_kdc_key = encryptor.decrypt(encrypted_value=encrypted_aes_key,
+                                                  decryption_key=password_hash,
+                                                  iv=encrypted_key_iv)
             decrypted_nonce = encryptor.decrypt(encrypted_value=encrypted_nonce,
                                                 decryption_key=password_hash,
                                                 iv=encrypted_key_iv)
             # Insert data into RAM DB
-            ram_template[CConsts.RAM_AES_KEY] = decrypted_key
+            ram_template[CConsts.RAM_AES_KEY] = decrypted_kdc_key
             ram_template[CConsts.RAM_ENCRYPTED_KEY_IV] = encrypted_key_iv
 
             # Validate nonce and update ticket in services JSON DB
@@ -94,7 +94,7 @@ class ChatRoomHandler:
 
             # Return the updated service object
             return self.__process_service_object(unpacked_data=unpacked_data, service_id=service_id,
-                                                 aes_key=decrypted_key, encrypted_key_iv=encrypted_key_iv)
+                                                 aes_key=decrypted_kdc_key, encrypted_key_iv=encrypted_key_iv)
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to unpack encrypted AES key packet.", exception=e)
@@ -124,9 +124,8 @@ class ChatRoomHandler:
             encrypted_client_id = encryptor.encrypt(value=client_id, encryption_key=aes_key, iv=authenticator_iv)
             encrypted_server_id = encryptor.encrypt(value=server_id, encryption_key=aes_key, iv=authenticator_iv)
             creation_time = utils.time_now()
-            encrypted_creation_time = encryptor.encrypt(value=creation_time, encryption_key=aes_key,
-                                                             iv=authenticator_iv)
-            # TODO - the bug is in the key, verify that its the same key, only in default server
+            encrypted_creation_time = encryptor.encrypt(value=creation_time, encryption_key=aes_key, iv=authenticator_iv)
+
             # Create packet data frame
             authenticator_data = {
                 ProtoConsts.AUTHENTICATOR_IV: authenticator_iv,
@@ -148,7 +147,7 @@ class ChatRoomHandler:
         except Exception as e:
             raise CustomException(error_msg=f"Unable to pack authenticator packet.", exception=e)
 
-    def __process_service_symmetric_key_request(self, ram_template: dict, service_object: dict, server_request_formatter: dict,
+    def __process_service_symmetric_key_request(self, ram_template: dict, service_object: dict,
                                                 encryptor: Encryptor, protocol_handler: ProtocolHandler) -> bytes:
         """Returns the packed symmetric key packet."""
         try:
@@ -175,17 +174,7 @@ class ChatRoomHandler:
                 ProtoConsts.AUTHENTICATOR: authenticator,
                 ProtoConsts.TICKET: ticket
             }
-            # Adjust sizes
-            # TODO - refactor into build packet format in protocol handler, do in in serialize packet
-            server_data_formatter = code_to_payload_template[ProtoConsts.REQ_MSG_SERVER_AES_KEY].copy()
-            server_data_formatter.update(protocol_handler.update_formatter_value(formatter=server_data_formatter,
-                                                                                 pivot_key=ProtoConsts.AUTHENTICATOR,
-                                                                                 pivot_value=ProtoConsts.SIZE,
-                                                                                 new_value=len(authenticator)))
-            server_data_formatter.update(protocol_handler.update_formatter_value(formatter=server_data_formatter,
-                                                                                 pivot_key=ProtoConsts.TICKET,
-                                                                                 pivot_value=ProtoConsts.SIZE,
-                                                                                 new_value=len(ticket)))
+
             # Log
             CustomFilter.filter_name = get_calling_method_name()
             self.logger.logger.debug(f"Created symmetric key packet data successfully.")
@@ -193,17 +182,15 @@ class ChatRoomHandler:
             # Return the packed request
             return protocol_handler.pack_request(code=ProtoConsts.REQ_MSG_SERVER_AES_KEY,
                                                  data=data,
-                                                 formatter=server_request_formatter)
+                                                 formatter=server_request.copy())
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to pack symmetric key request.", exception=e)
 
     def __enter_chat_room(self, sck: CustomSocket, service_socket: socket, ram_template: dict,
-                          server_request_formatter: dict, server_response_formatter: dict,
                           encryptor: Encryptor, protocol_handler: ProtocolHandler) -> None:
         """Start chatting with encrypted messages."""
         try:
-
             # Log
             client_name = ram_template[CConsts.RAM_USERNAME]
             CustomFilter.filter_name = get_calling_method_name()
@@ -211,15 +198,19 @@ class ChatRoomHandler:
 
             # Start chat
             while True:
+                # Monitor connection to chat room
+                if not sck.monitor_connection(sck=service_socket):
+                    service_socket.close()
+
+                # Get and validate data
                 msg_iv = encryptor.generate_bytes_stream()
                 ram_template[CConsts.RAM_MESSAGE_IV] = msg_iv
                 aes_key = ram_template[CConsts.RAM_AES_KEY]
                 client_id = ram_template[CConsts.RAM_CLIENT_ID]
                 Validator.validate_injection(data_type=ValConsts.FMT_ID, value_to_validate=client_id)
-                # TODO - C String error is in srv.info, some field is creating the error, maybe aes or id
 
                 # Get and encrypt message
-                msg_content = ClientInput.get_client_msg()
+                msg_content = f"{ram_template[CConsts.RAM_USERNAME]}: {ClientInput.get_client_input(suffix='message')}"
                 encrypted_message = encryptor.encrypt(value=msg_content, encryption_key=aes_key, iv=msg_iv)
 
                 msg_data = {
@@ -235,29 +226,25 @@ class ChatRoomHandler:
                 code_to_payload_template[ProtoConsts.REQ_SEND_MSG][ProtoConsts.MSG_CONTENT][ProtoConsts.SIZE] = len(encrypted_message)
                 packed_msg_request = protocol_handler.pack_request(code=ProtoConsts.REQ_SEND_MSG,
                                                                    data=msg_data,
-                                                                   formatter=server_request_formatter.copy())
+                                                                   formatter=server_request.copy())
                 msg_response = sck.send_recv_packet(sck=service_socket, packet=packed_msg_request,
                                                     logger=self.logger, response=True)
                 code, unpacked_msg_response = protocol_handler.unpack_request(received_packet=msg_response,
-                                                                              formatter=server_response_formatter.copy(),
+                                                                              formatter=server_response.copy(),
                                                                               deserialize=True)
-                print(code)
-                print(unpacked_msg_response)
-                # TODO - should be in a while true loop
+                # Corrupted message
                 if code != ProtoConsts.RES_MSG_ACK:
-                    # TODO - break from loop, or do something
+                    print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} {CConsts.SERVER_GENERAL_ERROR}",
+                                                 color=utils.Colors.RED))
                     pass
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to use chat room.", exception=e)
 
     def __handle_symmetric_key_request(self, service_object: dict, sck: CustomSocket, service_socket: socket,
-                                       ram_template: dict, server_request_formatter: dict,
-                                       encryptor: Encryptor, protocol_handler: ProtocolHandler) -> bytes:
+                                       ram_template: dict, encryptor: Encryptor, protocol_handler: ProtocolHandler) -> bytes:
         """Sends symmetric key request to the service."""
         try:
-
-            # TODO - create recovery mechanism, if client has disconnected and has msg server credentials, recover and reconnect
             # Fetch and validate connection data
             service_ip_address = service_object[CConsts.RAM_SERVER_IP]
             Validator.validate_injection(data_type=ValConsts.FMT_IPV4, value_to_validate=service_ip_address)
@@ -270,7 +257,6 @@ class ChatRoomHandler:
             # Pack request
             packed_service_aes_request = self.__process_service_symmetric_key_request(ram_template=ram_template,
                                                                                       service_object=service_object,
-                                                                                      server_request_formatter=server_request_formatter.copy(),
                                                                                       encryptor=encryptor,
                                                                                       protocol_handler=protocol_handler)
 
@@ -282,8 +268,7 @@ class ChatRoomHandler:
             raise CustomException(error_msg=f"Unable to handle symmetric key request from service.", exception=e)
 
     def connect_to_service(self, sck: CustomSocket, client_socket: socket, ram_template: dict, server_id: bytes,
-                           unpacked_aes_key_response: dict, server_request_formatter: dict, server_response_formatter: dict,
-                           encryptor: Encryptor, protocol_handler: ProtocolHandler) -> None:
+                           unpacked_aes_key_response: dict, encryptor: Encryptor, protocol_handler: ProtocolHandler) -> None:
         """Sends symmetric key request to the service and enter the chat room."""
         try:
             # Close connection to auth server
@@ -309,11 +294,10 @@ class ChatRoomHandler:
                                                                              sck=sck,
                                                                              service_socket=service_socket,
                                                                              ram_template=ram_template,
-                                                                             server_request_formatter=server_request_formatter.copy(),
                                                                              encryptor=encryptor,
                                                                              protocol_handler=protocol_handler)
                 code, unpacked_symmetric_key_response = protocol_handler.unpack_request(received_packet=symmetric_key_response,
-                                                                                        formatter=server_response_formatter.copy(),
+                                                                                        formatter=server_response.copy(),
                                                                                         deserialize=True)
                 # Enter chat room
                 if code == ProtoConsts.RES_AES_KEY_ACK:
@@ -322,16 +306,14 @@ class ChatRoomHandler:
                     self.__enter_chat_room(sck=sck,
                                            service_socket=service_socket,
                                            ram_template=ram_template,
-                                           server_request_formatter=server_request_formatter,
-                                           server_response_formatter=server_response_formatter,
                                            encryptor=encryptor,
                                            protocol_handler=protocol_handler)
                 else:
-                    # TODO - do something
-                    pass
+                    print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} {CConsts.SERVER_GENERAL_ERROR}",
+                                                 color=utils.Colors.RED))
 
             except IncompatibleNonce as e:
-                # TODO - cleanup
+                self.logger.logger.error(str(e))
                 print(utils.write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} {str(e)}", color=utils.Colors.RED))
                 client_socket.close()
                 sys_exit(ProtoConsts.STATUS_ERROR_CODE)

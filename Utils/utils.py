@@ -7,6 +7,7 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 from Utils.custom_exception_handler import CustomException
 from Utils.validator import Validator
+from Server.MsgServer.msg_server_constants import MsgConsts
 
 
 DATE_TIME_FMT = "%d/%m/%y_%H:%M:%S"
@@ -295,3 +296,18 @@ def insert_data_to_json_db(file_path: str, data: dict, pivot_key: str, pivot_val
         dump(file_data, output_file, indent=2)
 
 
+def parse_msg_info_file() -> tuple:
+    """Parses the default service data from msg.info file."""
+    try:
+        # Parse default service data
+        ip_and_port = parse_info_file(file_path=MsgConsts.MSG_FILE_NAME,
+                                      target_line_number=MsgConsts.LINE_IP_PORT)
+        server_id = parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_ID)
+        server_name = parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_NAME)
+        server_aes_key = parse_info_file(file_path=MsgConsts.MSG_FILE_NAME, target_line_number=MsgConsts.LINE_AES_KEY)
+
+        # Return as a Tuple
+        return ip_and_port, server_name, server_id, server_aes_key
+
+    except Exception as e:
+        raise CustomException(error_msg=f"Unable to parse {MsgConsts.MSG_FILE_NAME}.", exception=e)
