@@ -62,6 +62,8 @@ Designed to write more logs and print colorful information for development and d
 - **Magenta** - Communication protocol related output.
 ![debug_mode_examples.png](Images%2Fdebug_mode_examples.png)
 
+## Demo
+[demo-highlight.mp4](Images%2Fdemo-highlight.mp4)
 
 ## Architecture
 Client-Server architecture that utilizes python socket library.
@@ -151,11 +153,13 @@ Client-Server architecture that utilizes python socket library.
    - **services.json** - Will contain all the service's info. operates as the service's database, each service entry is represented as JSON object.
    ```json
    {
-    "server_id_hex": "d593dd40438b41b88622b2d7cf07e55d",
+    // The hexed service unique UUID
+    "server_id_hex": "5df3b3bb4b214cb8ae6fb54cf2dd9146",
     "name": "Printer 10",
-    "aes_key_hex": "63edf1a37b40a012757847169c8da6026ffd7d1a750c7ecc86b0e126d2946309",
+    // The base64 encoded service AES key   
+    "aes_key_encoded": "A8Dj6N0NdxeZzd49o5J08jX3Qad7w/Cw7TdLd1fwo84=",
     "server_ip": "127.0.0.1",
-    "server_port": 61590
+    "server_port": 50552
    }
    ```
 2. The Auth Server Will read his port number from 'port.info' file, if the file does not exist's or corrupted a default port number will be assigned.
@@ -179,13 +183,15 @@ Client-Server architecture that utilizes python socket library.
    {
     "connection_protocol": "tcp",
     "ip_address": "127.0.0.1",
-    "auth_port": 1234,
-    "port": 1234,
-    "server_id_hex": "0949dca733904f77a9e3928dfcbbe687",
-    "service_name": "Printer 1",
-    "ticket_iv": null,
-    "aes_key_hex": "ss4iqLtqm75tGrDCbIzW1MnY3M9VA+tYfWfTnxXEUBU=",
-    "message_iv": null,
+    "kdc_port": 8000,
+    "port": 52764,
+    // The hexed service unique UUID
+    "server_id_hex": "9d67673b4cdd48a280afb2b72765b9a5",
+    "service_name": "Printer 10",
+    // The hexed ticket key IV    
+    "ticket_iv": "8bc15d4b36f47b26baeba6adcbfca2d4",
+    // The base64 encoded service AES key   
+    "service_aes_key_encoded": "Y41vLaoRJ9B1U0UOd5NOU3ox8NWsF3pKaNjOsRJHK1Y=",
     "is_registered": true
    }
    ```
@@ -319,12 +325,3 @@ Encrypted Key Packet Structure:
 Response Code 1604 - Symmetric Key ACK.<br>
 Response Code 1605 - Encrypted Message ACK.<br>
 Response Code 1609 - Server General Error.<br>
-
-
-
-1. record a demo with x cmd windows open that shows auth, msg and at least 2 clients sending message in msg group
-2. record with wireshark and show the encrypted protocol.
-3. create setup.py script with dependencies, and check that only Crypto.Cipher needed to be installed.
-4. Add protocol add-ons 1700-1703 codes
-5. add comments to json files examples
-6. refactor json example for services_pool with IVs
