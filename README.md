@@ -124,16 +124,12 @@ Client-Server architecture that utilizes python socket library.
    - **services_info.json** - Will Operate as a database that contain all the available services details received from the KDC as JSON objects.
    ```json
    {
-     // The hexed service unique UUID
      "server_id": "5821f9a674174062ad3af49ee1432681",
      "server_name": "Printer 10",
      "server_ip": "127.0.0.1",
      "server_port": 58023,
-     // The base64 encoded service AES key        
      "aes_key": "Ph7tXPYg8xmNkgLQaDs2wnj8TdEqKco0j1zZqgzjClE=",
-     // The hexed encrypted key IV       
      "encrypted_key_iv": "327762044450156fc138733dfa979415", 
-     // The base64 encoded ticket packet
      "ticket": "GE5DrhlfTUO3mc4syncXjPtYIfmmdBdAYq069J7hQyaBrtB3/zNADD8KSeAS9ax/ki2yUtCoH/DdqjB3Mq0C7en8jsLMMwXzR0EYCjaKwM31Y4EHV5NGaBLJlz5E4KmKJgTjZRPkC/tW9iPS8YXa+bUUm1Vb3OCgala1lwj6A5/lVoWSrkwYdkV0lbM8ogKfPne8kgOLGTQF59FXyKW7Bgo="
    }
    ```
@@ -153,10 +149,8 @@ Client-Server architecture that utilizes python socket library.
    - **services.json** - Will contain all the service's info. operates as the service's database, each service entry is represented as JSON object.
    ```json
    {
-    // The hexed service unique UUID
     "server_id_hex": "5df3b3bb4b214cb8ae6fb54cf2dd9146",
     "name": "Printer 10",
-    // The base64 encoded service AES key   
     "aes_key_encoded": "A8Dj6N0NdxeZzd49o5J08jX3Qad7w/Cw7TdLd1fwo84=",
     "server_ip": "127.0.0.1",
     "server_port": 50552
@@ -185,12 +179,9 @@ Client-Server architecture that utilizes python socket library.
     "ip_address": "127.0.0.1",
     "kdc_port": 8000,
     "port": 52764,
-    // The hexed service unique UUID
     "server_id_hex": "9d67673b4cdd48a280afb2b72765b9a5",
     "service_name": "Printer 10",
-    // The hexed ticket key IV    
     "ticket_iv": "8bc15d4b36f47b26baeba6adcbfca2d4",
-    // The base64 encoded service AES key   
     "service_aes_key_encoded": "Y41vLaoRJ9B1U0UOd5NOU3ox8NWsF3pKaNjOsRJHK1Y=",
     "is_registered": true
    }
