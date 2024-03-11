@@ -60,6 +60,7 @@ Designed to write more logs and print colorful information for development and d
 - **Blue** - struct pack related output.
 - **Cyan** - DB related output.
 - **Magenta** - Communication protocol related output.
+
 ![debug_mode_examples.png](Images%2Fdebug_mode_examples.png)
 
 ## Demo
