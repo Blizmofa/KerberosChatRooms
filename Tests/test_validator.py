@@ -13,18 +13,21 @@ class TestValidator(TestCase):
 
     def test_validator_exception(self) -> None:
         with self.assertRaises(ValidatorError) as context:
-            self.validator_object.validate(data_type=ValConsts.FMT_IPV4_PORT,
-                                           value_to_validate='127.0.0.1:80000')
-        self.assertEqual(str(context.exception), "Unable to validate '127.0.0.1:80000', "
+            data_type = ValConsts.FMT_IPV4_PORT
+            value_to_validate = '127.0.0.1:80000'
+            self.validator_object.validate(data_type=data_type, value_to_validate=value_to_validate)
+        self.assertEqual(str(context.exception), f"Unable to validate '{data_type}': {value_to_validate}, "
                                                  "Error: Invalid IP or Port: Port number 80000 must be between 1 and "
                                                  "65535.")
 
     def test_validate_ip_and_port(self) -> None:
+        value_to_validate = '127.0.0.1:8000'
         self.assertTrue(self.validator_object.validate(data_type=ValConsts.FMT_IPV4_PORT,
-                                                       value_to_validate='127.0.0.1:8000'))
+                                                       value_to_validate=value_to_validate))
         self.assertTrue(self.validator_injection.validate(data_type=ValConsts.FMT_IPV4_PORT,
-                                                          value_to_validate='127.0.0.1:8000',
-                                                          config_template={ValConsts.FMT_IPV4_PORT: {"type": str, "max_length": 21}}))
+                                                          value_to_validate=value_to_validate,
+                                                          config_template={ValConsts.FMT_IPV4_PORT:
+                                                                               {"type": str, "max_length": 21}}))
 
     def test_validate_port_range(self) -> None:
         self.assertTrue(self.validator_object.validate(data_type=ValConsts.FMT_PORT, value_to_validate=8000))
@@ -45,10 +48,11 @@ class TestValidator(TestCase):
         self.assertEqual(self.validator_object.validate(data_type=ValConsts.FMT_ID, value_to_validate=assert_id_hex), assert_id_bytes)
 
         # Invalid Value
+        data_type = ValConsts.FMT_ID
         invalid_value = 12345
         with self.assertRaises(ValidatorError) as context:
-            self.validator_object.validate(data_type=ValConsts.FMT_ID, value_to_validate=invalid_value)
-        self.assertEqual(str(context.exception), f"Unable to validate '{invalid_value}', "
+            self.validator_object.validate(data_type=data_type, value_to_validate=invalid_value)
+        self.assertEqual(str(context.exception), f"Unable to validate '{data_type}': {invalid_value}, "
                                                  f"Error: {invalid_value} is of type {type(invalid_value)} "
                                                  f"and should be of type {(str, bytes)}")
 

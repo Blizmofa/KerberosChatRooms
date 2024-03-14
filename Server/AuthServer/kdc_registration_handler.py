@@ -99,10 +99,8 @@ class RegistrationHandler:
         """Registers new services if not already registered according to the server DB."""
         try:
             # Not registered server case
-            if "name" in data:
-                # if not utils.search_value_in_txt_file(value=data[ProtoConsts.NAME],
-                #                                       file_path=AuthConsts.SERVICES_FILE_PATH):
-
+            if not utils.search_value_in_txt_file(value=data[ProtoConsts.NAME],
+                                                  file_path=AuthConsts.SERVICES_FILE_PATH):
                 # Set Logger custom filter
                 CustomFilter.filter_name = data[ProtoConsts.NAME]
 

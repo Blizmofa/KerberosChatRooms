@@ -2,7 +2,7 @@ from socket import socket, AF_INET, SOCK_STREAM, SOCK_DGRAM, SocketKind, error a
 from threading import Thread
 from select import select
 from typing import Optional
-from Protocol_Handler.protocol_constants import ProtoConsts as ProtoConsts
+from Protocol_Handler.protocol_constants import ProtoConsts
 from Utils.custom_exception_handler import CustomException
 from Utils.logger import Logger
 from Utils.utils import write_with_color, Colors

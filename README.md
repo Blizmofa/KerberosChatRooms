@@ -70,7 +70,6 @@ Designed to write more logs and print colorful information for development and d
 Client-Server architecture that utilizes python socket library.
 ![software_architecture.jpg](Images%2Fsoftware_architecture.jpg)
 
-
 ### Major Components
 
 #### Client:

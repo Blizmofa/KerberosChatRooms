@@ -7,9 +7,6 @@ from Server.AuthServer.auth_server_constants import AuthConsts
 from Server.AuthServer.auth_server_core import AuthServerCore
 
 
-# TODO - after refactor, validate that register client fetching from db and not if "name"
-
-
 def get_kdc_args() -> Namespace:
     """Returns a Namespace with the KDC parsed CLI arguments."""
     kdc_parser = CustomArgParser(description="KDC argument parser.\n"

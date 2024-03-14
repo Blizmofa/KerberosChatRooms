@@ -1,29 +1,11 @@
 [
   {
-    "server_id": "4271e72ac3c54542bc5fe58ea17654cd",
+    "server_id": "08d06d04b7d748f7bbaeac92c95366b3",
     "server_name": "Printer 10",
     "server_ip": "127.0.0.1",
-    "server_port": 54522,
-    "aes_key": "{}",
-    "encrypted_key_iv": "{}",
-    "ticket": "{}"
-  },
-  {
-    "server_id": "09d4e437095143d7a0f912891a060b6a",
-    "server_name": "Printer 20",
-    "server_ip": "127.0.0.1",
-    "server_port": 54529,
-    "aes_key": "gBfzuFhYqtFEFUgUwKA6oN/4QhjnaNbSRPoAJXRjr0s=",
-    "encrypted_key_iv": "ae4440d7ff6a30fb453d1eaa85cb22f7",
-    "ticket": "GMqhQKCz1U6xtqah7D2+cjUJ1OQ3CVFD16D5EokaBgtqYiArriYraBo35B/qFwxcRz+EoRdFPBAdKb57vylqxefQRPNohRr/UKTsPHYY+2WFz/5nRPFtthCbOM3XB0rGEwN+oJ5awBJ+jMOnSN/QYEIfCT2wJKrQ59hRdNCnamtsQntLHW51rlCaG5M63En2fCTY4IkKCC+pEZkO9GI01/M="
-  },
-  {
-    "server_id": "105ceb8d46694475b53b72c0d27cf502",
-    "server_name": "Printer 30",
-    "server_ip": "127.0.0.1",
-    "server_port": 54534,
-    "aes_key": "{}",
-    "encrypted_key_iv": "{}",
-    "ticket": "{}"
+    "server_port": 52031,
+    "aes_key": "sQlNVDKm4YqCYbe2hTK6AKmS7mWna2rSmMaXO9LnPNU=",
+    "encrypted_key_iv": "1eb6be4644dbce3d5e9b472fc258fd88",
+    "ticket": "GIdQcZH+bUjqpkWXQGBi09II0G0Et9dI97uurJLJU2azOa27ANc7DmXuJhUOFVGCmU6Zf2tsDIZWBTvnGs4c/xviqJeIMsYqjoU4IOkHXYU3j2bPDUoiv8ApjBd8V79hZL7XN2dn0LsRUSmGYYnnrbTFC6cu99xG6ek1/Hp5ak7O5ffQoAnSgAZYOrrSpL61RxXfHzlnTfBmv77qenbFP9o="
   }
 ]

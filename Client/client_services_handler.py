@@ -1,4 +1,4 @@
-import sys
+from sys import exit
 from struct import calcsize, unpack
 from Utils.logger import Logger, CustomFilter
 from Utils.utils import insert_data_to_template, create_json_file, write_with_color, Colors
@@ -120,7 +120,7 @@ class ServicesHandler:
                 print(write_with_color(msg=f"{ProtoConsts.CONSOLE_ERROR} Chat rooms is not available at this time.",
                                        color=Colors.RED))
                 client_socket.close()
-                sys.exit(ProtoConsts.STATUS_ERROR_CODE)
+                exit(ProtoConsts.STATUS_ERROR_CODE)
 
             # Log
             CustomFilter.filter_name = get_calling_method_name()

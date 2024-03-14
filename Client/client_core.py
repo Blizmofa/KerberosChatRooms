@@ -160,23 +160,20 @@ class ClientCore(CustomSocket):
                 self.username = ClientInput.get_client_input(suffix="username")
 
             # Get client password
-            # if self.password is None:
-            #     self.password = ClientInput.get_client_password()
+            if self.password is None:
+                self.password = ClientInput.get_client_input(suffix="password")
 
             # Update RAM template
             ram_template[CConsts.RAM_USERNAME] = self.username
             ram_template[CConsts.RAM_CLIENT_ID] = client_id
-            self.password = "qwer1234"
             ram_template[CConsts.RAM_PASSWORD] = self.password
             ram_template[CConsts.RAM_PASSWORD_HASH] = self.encryptor.hash_password(value=self.password)
 
             # Already registered
-            # TODO - fix bug when in server not registered but in client registered
-            # if client_id:
-            #     ram_template[CConsts.RAM_IS_REGISTERED] = True
-            # else:
-            #     ram_template[CConsts.RAM_IS_REGISTERED] = False
-            ram_template[CConsts.RAM_IS_REGISTERED] = False
+            if client_id:
+                ram_template[CConsts.RAM_IS_REGISTERED] = True
+            else:
+                ram_template[CConsts.RAM_IS_REGISTERED] = False
 
             # For dev mode
             if self.debug_mode:

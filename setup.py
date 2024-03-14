@@ -3,7 +3,9 @@ from typing import Union
 from setuptools import setup, find_packages
 
 dependencies = [
-    "pycryptodome==3.15.0"
+    "pycryptodome==3.20.0",
+    "colorama~=0.4.4",
+    "setuptools~=58.1.0"
 ]
 
 

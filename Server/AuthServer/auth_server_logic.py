@@ -90,6 +90,9 @@ class AuthServerLogic:
             if not client_ram_template[AuthConsts.RAM_IS_REGISTERED]:
                 self.__send_client_is_not_registered_error(server_socket=server_socket,
                                                            client_socket=client_socket)
+            # In case of AS shutdown, get registered services from JSON DB
+            if not self.msg_server_list:
+                self.services_handler.get_registered_services_from_db(msg_server_list=self.msg_server_list)
 
             # In case of services registration process failure, Get default service
             if not self.msg_server_list and utils.is_exists(path_to_check=MsgConsts.MSG_FILE_NAME):
@@ -102,7 +105,6 @@ class AuthServerLogic:
             # Get services list packed data
             packed_services_list = self.services_handler.get_services_packed_list_data(msg_server_list=self.msg_server_list,
                                                                                        protocol_handler=self.protocol_handler)
-
             # Create packet data frame
             data = {
                 ProtoConsts.VERSION: ProtoConsts.SERVER_VERSION,

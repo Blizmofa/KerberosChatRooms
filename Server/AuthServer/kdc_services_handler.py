@@ -1,10 +1,12 @@
-from Utils.utils import write_with_color, Colors, parse_msg_info_file
+from json import load
+from Utils.utils import write_with_color, Colors, parse_msg_info_file, is_exists
 from Utils.validator import Validator, ValConsts
 from Utils.custom_exception_handler import CustomException, get_calling_method_name
 from Utils.logger import Logger, CustomFilter
 from Protocol_Handler.protocol_constants import ProtoConsts
 from Protocol_Handler.protocol_templates import code_to_payload_template
 from Protocol_Handler.protocol_handler import ProtocolHandler
+from Server.AuthServer.auth_server_constants import AuthConsts
 
 
 class ServicesHandler:
@@ -43,6 +45,41 @@ class ServicesHandler:
 
         except Exception as e:
             raise CustomException(error_msg=f"Unable to get default service data.", exception=e)
+
+    def get_registered_services_from_db(self, msg_server_list: list) -> None:
+        """Inserts the registered services data to the services list."""
+        try:
+            if not is_exists(path_to_check=AuthConsts.SERVICES_FILE_PATH):
+                return
+
+            # Parse and validate registered services
+            with open(AuthConsts.SERVICES_FILE_PATH, 'r') as db:
+                registered_services = load(db)
+
+            for service in registered_services:
+                server_id = service[AuthConsts.RAM_SERVER_ID_HEX]
+                if not isinstance(server_id, bytes):
+                    server_id = Validator.validate_injection(data_type=ValConsts.FMT_ID,
+                                                             value_to_validate=server_id)
+
+                server_aes_key = service[AuthConsts.RAM_AES_KEY_ENCODED]
+                if not isinstance(server_aes_key, bytes):
+                    server_aes_key = Validator.validate_injection(data_type=ValConsts.FMT_AES_KEY,
+                                                                  value_to_validate=server_aes_key)
+                # Add registered services data to the list
+                msg_server_list.append({
+                    ProtoConsts.SERVER_ID: server_id,
+                    ProtoConsts.SERVER_NAME: service[AuthConsts.RAM_CLIENT_NAME],
+                    ProtoConsts.AES_KEY: server_aes_key,
+                    ProtoConsts.SERVER_IP: service[AuthConsts.RAM_SERVER_IP],
+                    ProtoConsts.SERVER_PORT: service[AuthConsts.RAM_SERVER_PORT]
+                })
+
+                CustomFilter.filter_name = get_calling_method_name()
+                self.logger.logger.debug(f"Retrieved registered services data successfully.")
+
+        except Exception as e:
+            raise CustomException(error_msg=f"Unable to retrieve registered services from database.", exception=e)
 
     def get_services_packed_list_data(self, msg_server_list: list, protocol_handler: ProtocolHandler) -> bytes:
         """Returns the services list packed packet."""

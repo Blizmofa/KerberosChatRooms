@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2024-03-09T21:43:06.509Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" etag="r9R8bumkZ6DO9MunEac3" version="24.0.4" type="device">
+<mxfile host="app.diagrams.net" modified="2024-03-14T19:43:06.576Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" etag="SFpKeyJE_ll6KzS9qra4" version="24.0.4" type="device">
   <diagram name="Page-1" id="9f46799a-70d6-7492-0946-bef42562c5a5">
     <mxGraphModel dx="2534" dy="2438" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" background="none" math="0" shadow="0">
       <root>
@@ -26,7 +26,7 @@
           <mxGeometry x="110" y="-1487.5" width="340" height="287.5" as="geometry" />
         </mxCell>
         <mxCell id="fb5ipnyISE7amrQCMdho-167" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
-          <mxGeometry x="280" y="-1200" width="570" height="550" as="geometry" />
+          <mxGeometry x="280" y="-1200" width="600" height="550" as="geometry" />
         </mxCell>
         <mxCell id="fb5ipnyISE7amrQCMdho-24" value="&lt;b&gt;Extends&lt;/b&gt;" style="endArrow=block;endSize=16;endFill=0;html=1;rounded=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" parent="1" edge="1">
           <mxGeometry width="160" relative="1" as="geometry">
@@ -93,8 +93,8 @@
             <mxPoint x="-24" y="4" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="fb5ipnyISE7amrQCMdho-79" value="&lt;p style=&quot;margin:0px;margin-top:6px;text-align:center;&quot;&gt;&lt;b&gt;ServicesHandler&lt;/b&gt;&lt;/p&gt;&lt;hr&gt;&lt;p style=&quot;margin:0px;margin-left:8px;&quot;&gt;&lt;b&gt;+ get_default_service_data()&lt;br&gt;+ get_services_packed_list_data()&lt;/b&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:8px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="align=left;overflow=fill;html=1;dropTarget=0;whiteSpace=wrap;" parent="1" vertex="1">
-          <mxGeometry x="-290" y="-870" width="220" height="70" as="geometry" />
+        <mxCell id="fb5ipnyISE7amrQCMdho-79" value="&lt;p style=&quot;margin:0px;margin-top:6px;text-align:center;&quot;&gt;&lt;b&gt;ServicesHandler&lt;/b&gt;&lt;/p&gt;&lt;hr&gt;&lt;p style=&quot;margin:0px;margin-left:8px;&quot;&gt;&lt;b&gt;+ get_default_service_data()&lt;/b&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:8px;&quot;&gt;&lt;b&gt;+ get_registered_services_from_db()&lt;br&gt;+ get_services_packed_list_data()&lt;/b&gt;&lt;/p&gt;&lt;p style=&quot;margin:0px;margin-left:8px;&quot;&gt;&lt;br&gt;&lt;/p&gt;" style="align=left;overflow=fill;html=1;dropTarget=0;whiteSpace=wrap;" parent="1" vertex="1">
+          <mxGeometry x="-290" y="-886" width="220" height="86" as="geometry" />
         </mxCell>
         <mxCell id="fb5ipnyISE7amrQCMdho-80" value="" style="shape=component;jettyWidth=8;jettyHeight=4;" parent="fb5ipnyISE7amrQCMdho-79" vertex="1">
           <mxGeometry x="1" width="20" height="20" relative="1" as="geometry">

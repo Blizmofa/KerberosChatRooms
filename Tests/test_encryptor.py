@@ -1,7 +1,7 @@
 from unittest import TestCase, main as unittest_main
 from sys import path
 path.append('..')
-from Utils.encryptor import Encryptor, get_random_bytes
+from Utils.encryptor import Encryptor
 
 
 class TestEncryptor(TestCase):
