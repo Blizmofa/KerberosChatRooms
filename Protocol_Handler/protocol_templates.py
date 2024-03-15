@@ -59,7 +59,7 @@ code_to_payload_template = {
     ProtoConsts.RES_MSG_SERVERS_LIST: {
         ProtoConsts.SERVER_ID: {ProtoConsts.SIZE: ProtoConsts.SIZE_SERVER_ID, ProtoConsts.TYPE: bytes, ProtoConsts.CONTENT: None},
         ProtoConsts.SERVER_NAME: {ProtoConsts.SIZE: ProtoConsts.SIZE_SERVER_NAME, ProtoConsts.TYPE: str, ProtoConsts.CONTENT: None},
-        ProtoConsts.SERVER_IP: {ProtoConsts.SIZE: ProtoConsts.SIZE_SERVER_IP, ProtoConsts.TYPE: 'ipv4', ProtoConsts.CONTENT: None},
+        ProtoConsts.SERVER_IP: {ProtoConsts.SIZE: ProtoConsts.SIZE_SERVER_IP, ProtoConsts.TYPE: ProtoConsts.IPV4, ProtoConsts.CONTENT: None},
         ProtoConsts.SERVER_PORT: {ProtoConsts.SIZE: ProtoConsts.SIZE_SERVER_PORT, ProtoConsts.TYPE: int, ProtoConsts.CONTENT: None}
     },
 
